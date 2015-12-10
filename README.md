@@ -1,4 +1,14 @@
-# CitySDK #
+# CitySDK Packaged for Meteor #
+
+## Notes About Transition to Meteor  
+
+To make the CitySDK friendlier to Meteor, the jQuery.ajax calls were replaced with Meteor's HTTP interface. Because jQuery handles JSONP requests and automatically sets up callbacks for cross-domain requests (and Meteor's HTTP doesn't), the client-side functionality of this package will need to take place through calls to as-of-yet-unwritten Meteor.methods to get around Meteor's limitations on client-side XDRs.
+
+This method is preferred, because it allows for privacy of API keys (stored in a server-side variable), safer cross-domain-like requests, and overall a more Meteor-like interface.
+
+Finally, for enhanced code readability, the asynchronous style was rewritten to a synchronous style, thanks to Meteor's HTTP methods that can be used in a synchronous style on the server.
+
+----
 
 This readme is a work in progress. For an overview of the project, please visit [https://uscensusbureau.github.io/citysdk](https://uscensusbureau.github.io/citysdk)
 
