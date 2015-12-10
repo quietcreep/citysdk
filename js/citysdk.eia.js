@@ -30,23 +30,20 @@ EIAModule.prototype.enable = function(apiKey) {
  * @param callback
  */
 EIAModule.prototype.categoryRequest = function(request, callback) {
-    var apiKeyPattern = /({apiKey})/;
-    var categoryPattern = /({category})/;
+  var apiKeyPattern = /({apiKey})/;
+  var categoryPattern = /({category})/;
 
-    var categoryURL = "http://api.eia.gov/category/?api_key={apiKey}&category_id={category}";
+  var categoryURL = "http://api.eia.gov/category/?api_key={apiKey}&category_id={category}";
 
-    if(!("category" in request)) {
-        request.category = 371; //Default - root list of all datasets
-    }
+  if(! ( "category" in request ))
+    request.category = 371; //Default - root list of all datasets
 
-    categoryURL = categoryURL.replace(apiKeyPattern, this.apiKey);
-    categoryURL = categoryURL.replace(categoryPattern, request.category);
+  categoryURL = categoryURL.replace(apiKeyPattern, this.apiKey);
+  categoryURL = categoryURL.replace(categoryPattern, request.category);
 
-    CitySDK.prototype.sdkInstance.ajaxRequest(categoryURL).done(function(response) {
-        response = $.parseJSON(response);
-        callback(response);
-    });
-
+  var response = CitySDK.prototype.sdkInstance.ajaxRequest(categoryURL);
+  response = JSON.parse( response.content );
+  return response;
 };
 
 /**
@@ -72,10 +69,9 @@ EIAModule.prototype.seriesRequest = function(request, callback) {
     seriesURL = seriesURL.replace(apiKeyPattern, this.apiKey);
     seriesURL = seriesURL.replace(seriesPattern, request.series);
 
-    CitySDK.prototype.sdkInstance.ajaxRequest(seriesURL).done(function(response) {
-        response = $.parseJSON(response);
-        callback(response);
-    });
+    var response = CitySDK.prototype.sdkInstance.ajaxRequest(seriesURL);
+    response = JSON.parse( response.content );
+    return response;
 };
 
 //After this point the module is all up to you

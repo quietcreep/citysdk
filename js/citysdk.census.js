@@ -2,6 +2,8 @@
  * This is the Census module
  */
 
+var debug = false;
+
 //Attach a new module object to the CitySDK prototype.
 //It is advised to keep the filenames and module property names the same
 CitySDK.prototype.modules.census = new CensusModule();
@@ -802,7 +804,7 @@ CensusModule.prototype.aliases = {
 CensusModule.prototype.parseToVariable = function(aliasOrVariable) {
     //If the requested string is an alias, return the appropriate variable from the dictionary
     if(aliasOrVariable in this.aliases) {
-        return this.aliases[aliasOrVariable].variable;
+      return this.aliases[aliasOrVariable].variable;
     }
 
     //Otherwise, this is either already a variable name or is unsupported
@@ -880,20 +882,21 @@ CensusModule.prototype.parseRequestLatLng = function(request) {
  * @constructor
  */
 CensusModule.prototype.ESRItoGEO = function(esriJSON) {
-    var json = $.parseJSON(esriJSON);
-    var features = json.features;
+  var json = esriJSON;
+  var features = json.features;
 
-    var geojson = {
-        "type": "FeatureCollection",
-        "features": []
-    };
+  var geojson = {
+      "type": "FeatureCollection",
+      "features": []
+  };
 
-    for(var i = 0; i < features.length; i++) {
-        features[i].spatialReference = json.spatialReference;
-        geojson.features.push(Terraformer.ArcGIS.parse(features[i]));
-    }
+  for(var i = 0; i < features.length; i++) {
+      features[i].spatialReference = json.spatialReference;
+      geojson.features.push(Terraformer.ArcGIS.parse(features[i]));
+  }
 
-    return geojson;
+  if ( debug ) console.log( 'ESRItoGEO: ', geojson );
+  return geojson;
 };
 
 /**
@@ -903,16 +906,15 @@ CensusModule.prototype.ESRItoGEO = function(esriJSON) {
  * @constructor
  */
 CensusModule.prototype.GEOtoESRI = function(geoJSON) {
-    return Terraformer.ArcGIS.convert(geoJSON);
+  return Terraformer.ArcGIS.convert(geoJSON);
 };
 
 /**
  * Downloads an ACS API's entire dictionary of variables from the Census
  * @param api
  * @param year
- * @param callback
  */
-CensusModule.prototype.getACSVariableDictionary = function(api, year, callback) {
+CensusModule.prototype.getACSVariableDictionary = function(api, year) {
     var apiPattern = /({api})/;
     var yearPattern = /({year})/;
 
@@ -920,12 +922,9 @@ CensusModule.prototype.getACSVariableDictionary = function(api, year, callback) 
     URL = URL.replace(apiPattern, api);
     URL = URL.replace(yearPattern, year);
 
-    CitySDK.prototype.sdkInstance.ajaxRequest(URL).done(
-        function(response) {
-            response = $.parseJSON(response);
-            callback(response);
-        }
-    );
+    var response = CitySDK.prototype.sdkInstance.ajaxRequest(URL);
+    if ( debug ) console.log( 'getACSVariableDictionary: ', response );
+    return JSON.parse( response.content );
 };
 
 /**
@@ -937,26 +936,19 @@ CensusModule.prototype.getACSVariableDictionary = function(api, year, callback) 
  *
  * @param {float} lat Latitude
  * @param {float} lng Longitude
- * @param {function} callback Callback function
  */
-CensusModule.prototype.latLngToFIPS = function(lat, lng, callback) {
-    var latPattern = /({lat})/;
-    var lngPattern = /({lng})/;
+CensusModule.prototype.latLngToFIPS = function(lat, lng) {
+  var latPattern = /({lat})/;
+  var lngPattern = /({lng})/;
+  var geocoderURL = "http://geocoding.geo.census.gov/geocoder/geographies/coordinates?x={lng}&y={lat}&benchmark=4&vintage=4&layers=8,12,28,86,84&format=json";
 
-    //The question mark at the end of this url tells JQuery to handle setting up and calling the JSONP callback
-    var geocoderURL = "http://geocoding.geo.census.gov/geocoder/geographies/coordinates?x={lng}&y={lat}&benchmark=4&vintage=4&layers=8,12,28,86,84&format=jsonp&callback=?";
+  //Insert our requested coordinates into the geocoder url
+  geocoderURL = geocoderURL.replace(latPattern, lat);
+  geocoderURL = geocoderURL.replace(lngPattern, lng);
 
-    //Insert our requested coordinates into the geocoder url
-    geocoderURL = geocoderURL.replace(latPattern, lat);
-    geocoderURL = geocoderURL.replace(lngPattern, lng);
-    //Make our AJAX request
-    var request = CitySDK.prototype.sdkInstance.jsonpRequest(geocoderURL);
-
-    //Attach a completion event to the promise
-    request.done(function(response) {
-        //Call the callback
-        callback(response.result.geographies);
-    });
+  var response = CitySDK.prototype.sdkInstance.jsonpRequest(geocoderURL).data.result.geographies;
+  if ( debug ) console.log( 'latLngToFIPS: ', response );
+  return response;
 };
 
 /**
@@ -967,15 +959,14 @@ CensusModule.prototype.latLngToFIPS = function(lat, lng, callback) {
  * @param street Street Address
  * @param city City
  * @param state State (2-Letter USPS Code)
- * @param callback Callback function
  */
-CensusModule.prototype.addressToFIPS = function(street, city, state, callback) {
+CensusModule.prototype.addressToFIPS = function( street, city, state ) {
     var streetPattern = /({street})/;
     var cityPattern = /({city})/;
     var statePattern = /({state})/;
 
     //Geocoder URL for addresses
-    var geocoderURL = "http://geocoding.geo.census.gov/geocoder/geographies/address?street={street}&city={city}&state={state}&benchmark=4&vintage=4&layers=8,12,28,86,84&format=jsonp&callback=?";
+    var geocoderURL = "http://geocoding.geo.census.gov/geocoder/geographies/address?street={street}&city={city}&state={state}&benchmark=4&vintage=4&layers=8,12,28,86,84&format=json";
 
     //Replace with our data
     geocoderURL = geocoderURL.replace(streetPattern, street);
@@ -986,53 +977,45 @@ CensusModule.prototype.addressToFIPS = function(street, city, state, callback) {
     geocoderURL = encodeURI(geocoderURL);
 
     //Make the call
-    var request = CitySDK.prototype.sdkInstance.jsonpRequest(geocoderURL);
-
-    //Send to the callback
-    request.done(function(response) {
-        callback(response.result.addressMatches);
-    });
+    var response = CitySDK.prototype.sdkInstance.jsonpRequest(geocoderURL);
+    if ( debug ) console.log( 'addressToFIPS: ', response );
+    return response.result.addressMatches;
 };
 
 /**
- * Converts a ZIP code to Lat/Lng and calls the callback on it.
+ * Converts a ZIP code to Lat/Lng
  * @param zip {Number} 5 digit Zip code
- * @param callback
  */
-CensusModule.prototype.ZIPtoLatLng = function(zip, callback) {
+CensusModule.prototype.ZIPtoLatLng = function(zip) {
     var zipPattern = /({zip})/;
 
     var tigerURL = "http://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_Current/MapServer/2/query?where=ZCTA5%3D{zip}&text=&objectIds=&time=&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&relationParam=&outFields=CENTLAT%2CCENTLON&returnGeometry=false&maxAllowableOffset=&geometryPrecision=&outSR=&returnIdsOnly=false&returnCountOnly=false&orderByFields=&groupByFieldsForStatistics=&outStatistics=&returnZ=false&returnM=false&gdbVersion=&returnDistinctValues=false&f=pjson";
-
     tigerURL = tigerURL.replace(zipPattern, zip);
 
-    var request = CitySDK.prototype.sdkInstance.ajaxRequest(tigerURL);
+    var response = CitySDK.prototype.sdkInstance.ajaxRequest(tigerURL);
+    response = JSON.parse( response.content );
+    var returnValue = {
+        "lat": null,
+        "lng": null
+    };
 
-    request.done(function(response) {
-        response = $.parseJSON(response);
-        var returnValue = {
-            "lat": null,
-            "lng": null
-        };
+    if ("features" in response) {
+      if(response.features.length > 0) {
+        returnValue.lat = response.features[0].attributes.CENTLAT;
+        returnValue.lng = response.features[0].attributes.CENTLON;
+      }
+    }
 
-        if("features" in response) {
-            if(response.features.length > 0) {
-                returnValue.lat = response.features[0].attributes.CENTLAT;
-                returnValue.lng = response.features[0].attributes.CENTLON;
-            }
-        }
-
-        callback(returnValue);
-    })
+    if ( debug ) console.log( 'ZIPtoLatLng: ', response, returnValue );
+    return returnValue;
 };
 
 
 /**
  * Makes a request to the ACS5 Summary API. Should be used via APIRequest and not on its own, typically
  * @param {object} request JSON request (see APIRequest)
- * @param {function} callback
  */
-CensusModule.prototype.acsSummaryRequest = function(request, callback) {
+CensusModule.prototype.acsSummaryRequest = function( request ) {
     var yearPattern = /({year})/;
     var apiPattern = /({api})/;
     var variablePattern = /({var})/;
@@ -1147,21 +1130,21 @@ CensusModule.prototype.acsSummaryRequest = function(request, callback) {
     //Construct the list of variables
     var variableString = "";
 
-    for(var i = 0; i < request.variables.length; i++) {
-        if(this.isNormalizable(request.variables[i])) {
-            if(window.jQuery.inArray("population", request.variables) < 0) {
-                //We have a variable that is normalizable, but no population in the request.
-                //Grab the population
-                request.variables.push("population");
-            }
-            //We have normalizable variables AND a request for population, we can break the for loop now
-            break;
+    for (var i = 0; i < request.variables.length; i++) {
+      if ( this.isNormalizable(request.variables[i] )) {
+        if ( Array.isArray( request.variables ) && request.variables.indexOf( "population" ) < 0 ) {
+          //We have a variable that is normalizable, but no population in the request.
+          //Grab the population
+          request.variables.push("population");
         }
+        //We have normalizable variables AND a request for population, we can break the for loop now
+        break;
+      }
     }
 
-    for(var i = 0; i < request.variables.length; i++) {
-        if(i != 0) variableString += ",";
-        variableString += this.parseToVariable(request.variables[i]);
+    for ( var i = 0; i < request.variables.length; i++ ) {
+      if ( i != 0 ) variableString += ",";
+      variableString += this.parseToVariable( request.variables[i] );
     }
 
     //The URL for ACS5 request (summary file)
@@ -1179,70 +1162,64 @@ CensusModule.prototype.acsSummaryRequest = function(request, callback) {
     acsURL = acsURL.replace(placePattern, request.place);
     acsURL = acsURL.replace(keyPattern, this.apiKey);
 
-    var request = CitySDK.prototype.sdkInstance.ajaxRequest(acsURL);
-
-    //Attach a completion event to the promise
-    request.done(function(response) {
-        //Turn it into json
-        var jsonObject = $.parseJSON(response);
-        //Call the callback
-        callback(jsonObject);
-    });
+    var response = CitySDK.prototype.sdkInstance.ajaxRequest(acsURL).data;
+    if ( debug ) console.log( 'acsSummaryRequest: ', response );
+    return response;
 };
 
 /**
  * Makes a call to the Census TigerWeb API for Geometry.
  * Our spatial reference is 4326
  * @param request
- * @param callback
  */
-CensusModule.prototype.tigerwebRequest = function(request, callback) {
+CensusModule.prototype.tigerwebRequest = function(request) {
     //This will ensure our coordinates come out properly
-    var spatialReferenceCode = 4326;
+    var spatialReferenceCode = 4326,
+        res = null;
 
     var servers = {
-        current: {
-            url: "http://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_Current/MapServer/{mapserver}/query",
-            mapServers: {
-                "state": 84,
-                "county": 86,
-                "tract": 8,
-                "blockGroup": 10,
-                "blocks": 12,
-                "place": 28
-            }
-        },
-        acs2014: {
-            url: "http://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_ACS2014/MapServer/{mapserver}/query",
-            mapServers: {
-                "state": 82,
-                "county": 84,
-                "tract": 8,
-                "blockGroup": 10,
-                "place": 26
-            }
-        },
-        acs2013: {
-            url: "http://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_ACS2013/MapServer/{mapserver}/query",
-            mapServers: {
-                "state": 82,
-                "county": 84,
-                "tract": 8,
-                "blockGroup": 10,
-                "place": 26
-            }
-        },
-        census2010: {
-            url: "http://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_Census2010/MapServer/{mapserver}/query",
-            mapServers: {
-                "state": 98,
-                "county": 100,
-                "tract": 14,
-                "blockGroup": 16,
-                "blocks": 18,
-                "place": 34
-            }
+      current: {
+        url: "http://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_Current/MapServer/{mapserver}/query",
+        mapServers: {
+          "state": 84,
+          "county": 86,
+          "tract": 8,
+          "blockGroup": 10,
+          "blocks": 12,
+          "place": 28
         }
+      },
+      acs2014: {
+        url: "http://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_ACS2014/MapServer/{mapserver}/query",
+        mapServers: {
+          "state": 82,
+          "county": 84,
+          "tract": 8,
+          "blockGroup": 10,
+          "place": 26
+        }
+      },
+      acs2013: {
+        url: "http://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_ACS2013/MapServer/{mapserver}/query",
+        mapServers: {
+          "state": 82,
+          "county": 84,
+          "tract": 8,
+          "blockGroup": 10,
+          "place": 26
+        }
+      },
+      census2010: {
+        url: "http://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_Census2010/MapServer/{mapserver}/query",
+        mapServers: {
+          "state": 98,
+          "county": 100,
+          "tract": 14,
+          "blockGroup": 16,
+          "blocks": 18,
+          "place": 34
+        }
+      }
     };
 
     var server = "current";
@@ -1259,35 +1236,30 @@ CensusModule.prototype.tigerwebRequest = function(request, callback) {
 
     //Check for zip code
     if("zip" in request) {
-        //We have zip code - but do we have lat/lng?
-        if(!("lat" in request) || !("lng" in request)) {
-            //We have the zip but no lat/lng - parse it and re-call
-            this.ZIPtoLatLng(request.zip, function(response) {
-                request.lat = response.lat;
-                request.lng = response.lng;
-                CitySDK.prototype.sdkInstance.modules.census.tigerwebRequest(request, callback);
-                return;
-            });
-        }
+      //We have zip code - but do we have lat/lng?
+      if(!("lat" in request) || !("lng" in request)) {
+        //We have the zip but no lat/lng - parse it and re-call
+        var response = this.ZIPtoLatLng(request.zip);
+        request.lat = response.lat;
+        request.lng = response.lng;
+        CitySDK.prototype.sdkInstance.modules.census.tigerwebRequest(request);
+      }
     }
 
     //Check for an address object
     if("address" in request) {
-        //We have address - but do we have lat/lng?
-        if(!("lat" in request) || !("lng" in request)) {
-            //We have the address but no lat/lng - parse it and re-call
-            this.addressToFIPS(request.address.street, request.address.city, request.address.state, function(response) {
-                //Take the first matched address
-                request.lat = response[0].coordinates.y;
-                request.lng = response[0].coordinates.x;
+      //We have address - but do we have lat/lng?
+      if(!("lat" in request) || !("lng" in request)) {
+        //We have the address but no lat/lng - parse it and re-call
+        var response = this.addressToFIPS( request.address.street, request.address.city, request.address.state );
+        request.lat = response[0].coordinates.y;
+        request.lng = response[0].coordinates.x;
 
-                //Attach this "matched address" to the request address object so the user knows what we're using
-                request.address.addressMatch = response[0];
+        //Attach this "matched address" to the request address object so the user knows what we're using
+        request.address.addressMatch = response[0];
 
-                CitySDK.prototype.sdkInstance.modules.census.tigerwebRequest(request, callback);
-                return;
-            })
-        }
+        CitySDK.prototype.sdkInstance.modules.census.tigerwebRequest(request);
+      }
     }
 
     this.parseRequestLatLng(request);
@@ -1304,95 +1276,85 @@ CensusModule.prototype.tigerwebRequest = function(request, callback) {
 
     tigerURL = servers[server].url;
 
-    if("container" in request && "sublevel" in request) {
-        if(!request.sublevel) {
-            //They submitted a sublevel flag but it's false... remove the unnecessary flags and re-request
-            delete request.sublevel;
-            delete request.container;
-            CitySDK.prototype.sdkInstance.modules.census.tigerwebRequest(request, callback);
-            return;
-        }
+    if ("container" in request && "sublevel" in request) {
+      if (!request.sublevel) {
+        //They submitted a sublevel flag but it's false... remove the unnecessary flags and re-request
+        delete request.sublevel;
+        delete request.container;
+        return CitySDK.prototype.sdkInstance.modules.census.tigerwebRequest(request);
+      }
 
-        if(!("containerGeometry" in request)) {
-            //We have a sublevel request with a container. We need to grab the container's geography and return it
-            tigerURL = tigerURL.replace(mapserverPattern, mapServers[request.container]);
-            tigerRequest.geometry = request.lng + "," + request.lat;
-            tigerRequest.geometryType = "esriGeometryPoint";
-            tigerRequest.spatialRel = "esriSpatialRelIntersects";
-
-            CitySDK.prototype.sdkInstance.postRequest(tigerURL, tigerRequest).done(
-                function(response) {
-                    var json = $.parseJSON(response);
-                    var features = json.features;
-                    //Grab our container ESRI geography, attach it to our request, and call this function again.
-                    if(request.container == "us") {
-                        request.containerGeometry = CitySDK.prototype.sdkInstance.modules.census.GEOtoESRI(usBoundingBox)[0].geometry;
-                    } else {
-                        request.containerGeometry = features[0].geometry;
-                    }
-                    CitySDK.prototype.sdkInstance.modules.census.tigerwebRequest(request, callback);
-                }
-            );
-            return;
-        } else {
-            //We have a sublevel request with a container, AND we've already grabbed the container's ESRI json
-            tigerURL = tigerURL.replace(mapserverPattern, mapServers[request.level]);
-            tigerRequest.geometry = JSON.stringify(request.containerGeometry);
-            tigerRequest.geometryType = "esriGeometryPolygon";
-            tigerRequest.spatialRel = (request.container == "place" || request.container == "geometry") ? "esriSpatialRelIntersects" : "esriSpatialRelContains";
-
-            delete request.containerGeometry;
-
-            CitySDK.prototype.sdkInstance.postRequest(tigerURL, tigerRequest).done(
-                function(response) {
-                    callback(CitySDK.prototype.sdkInstance.modules.census.ESRItoGEO(response));
-                }
-            );
-        }
-    } else if ("sublevel" in request) {
-        if(!request.sublevel) {
-            //They submitted a sublevel flag but it's false... remove the unnecessary flags and re-request
-            delete request.sublevel;
-            delete request.container;
-            CitySDK.prototype.sdkInstance.modules.census.tigerwebRequest(request, callback);
-            return;
-        }
-        //Sublevel, no container
-        //Make the container equal to the level, and the sublevel
-        request.container = request.level;
-        switch(request.level) {
-            case "us":
-                request.level = "state";
-                break;
-            case "state":
-                request.level = "county";
-                break;
-            case "county":
-                request.level = "tract";
-                break;
-            case "place":
-                request.level = "tract";
-                break;
-            case "tract":
-                request.level = "blockGroup";
-                break;
-        };
-
-        CitySDK.prototype.sdkInstance.modules.census.tigerwebRequest(request, callback);
-        return;
-    } else {
+      if(!("containerGeometry" in request)) {
         //We have a sublevel request with a container. We need to grab the container's geography and return it
-        tigerURL = tigerURL.replace(mapserverPattern, mapServers[request.level]);
+        tigerURL = tigerURL.replace(mapserverPattern, mapServers[request.container]);
         tigerRequest.geometry = request.lng + "," + request.lat;
         tigerRequest.geometryType = "esriGeometryPoint";
         tigerRequest.spatialRel = "esriSpatialRelIntersects";
 
-        CitySDK.prototype.sdkInstance.postRequest(tigerURL, tigerRequest).done(
-            function(response) {
-                callback(CitySDK.prototype.sdkInstance.modules.census.ESRItoGEO(response));
-            }
-        );
+        var response = CitySDK.prototype.sdkInstance.postRequest(tigerURL, tigerRequest).data;
+        var features = response.features;
+        //Grab our container ESRI geography, attach it to our request, and call this function again.
+        if (request.container == "us") {
+          request.containerGeometry = CitySDK.prototype.sdkInstance.modules.census.GEOtoESRI(usBoundingBox)[0].geometry;
+        } else {
+          request.containerGeometry = features[0].geometry;
+        }
+
+        return CitySDK.prototype.sdkInstance.modules.census.tigerwebRequest(request);
+      } else {
+        //We have a sublevel request with a container, AND we've already grabbed the container's ESRI json
+        tigerURL = tigerURL.replace(mapserverPattern, mapServers[request.level]);
+        tigerRequest.geometry = JSON.stringify(request.containerGeometry);
+        tigerRequest.geometryType = "esriGeometryPolygon";
+        tigerRequest.spatialRel = (request.container == "place" || request.container == "geometry") ? "esriSpatialRelIntersects" : "esriSpatialRelContains";
+
+        delete request.containerGeometry;
+
+        var response = CitySDK.prototype.sdkInstance.postRequest(tigerURL, tigerRequest).data;
+        return CitySDK.prototype.sdkInstance.modules.census.ESRItoGEO(response);
+      }
+    } else if ("sublevel" in request) {
+      if (!request.sublevel) {
+        //They submitted a sublevel flag but it's false... remove the unnecessary flags and re-request
+        delete request.sublevel;
+        delete request.container;
+        return CitySDK.prototype.sdkInstance.modules.census.tigerwebRequest(request);
+      }
+      //Sublevel, no container
+      //Make the container equal to the level, and the sublevel
+      request.container = request.level;
+      switch(request.level) {
+        case "us":
+            request.level = "state";
+            break;
+        case "state":
+            request.level = "county";
+            break;
+        case "county":
+            request.level = "tract";
+            break;
+        case "place":
+            request.level = "tract";
+            break;
+        case "tract":
+            request.level = "blockGroup";
+            break;
+      };
+
+      res = CitySDK.prototype.sdkInstance.modules.census.tigerwebRequest(request);
+    } else {
+      //We have a sublevel request with a container. We need to grab the container's geography and return it
+      tigerURL = tigerURL.replace(mapserverPattern, mapServers[request.level]);
+      tigerRequest.geometry = request.lng + "," + request.lat;
+      tigerRequest.geometryType = "esriGeometryPoint";
+      tigerRequest.spatialRel = "esriSpatialRelIntersects";
+
+      var resp = CitySDK.prototype.sdkInstance.postRequest(tigerURL, tigerRequest).data;
+      res = CitySDK.prototype.sdkInstance.modules.census.ESRItoGEO(resp);
     }
+
+    if ( debug ) console.log( 'latLngToFIPS: ', res );
+    return res;
 };
 
 /**
@@ -1458,200 +1420,168 @@ CensusModule.prototype.tigerwebRequest = function(request, callback) {
  *       ]
  *   }
  * @param {object} request The JSON object of the request
- * @param {function} callback A callback, which accepts a response parameter
  */
-CensusModule.prototype.APIRequest = function(request, callback) {
-    //Check for a year
-    if(!("year" in request)) {
-        request.year = this.DEFAULT_YEAR;
-    }
+CensusModule.prototype.APIRequest = function(request) {
+  if ( !( "year" in request ))
+    request.year = this.DEFAULT_YEAR;
 
-    if(!("api" in request)) {
-        request.api = this.DEFAULT_API;
+  if( !("api" in request ))
+    request.api = this.DEFAULT_API;
+  else if ( this.acsyears[request.year].indexOf( request.api ) < 0 )
+    console.log( "Warning: API " + request.api + " does not appear to support " + request.year );
+
+  //Check for a level
+  if (! ( "level" in request ))
+    request.level = this.DEFAULT_LEVEL;
+
+  //Check for sublevel flag
+  if (! ( "sublevel" in request )) {
+      request.sublevel = false;
+  } else if ( typeof request.sublevel !== "boolean" ) {
+    //If we weren't given a boolean, convert the string to a boolean
+    if ( request.sublevel == "true" ) {
+      request.sublevel = true;
     } else {
-        if(window.jQuery.inArray(request.api, this.acsyears[request.year]) < 0) {
-            console.log("Warning: API " + request.api + " does not appear to support " + request.year);
-        }
+      request.sublevel = false;
     }
+  }
 
-    //Check for a level
-    if(!("level" in request)) {
-        request.level = this.DEFAULT_LEVEL;
+  //Check for zip code
+  if ( "zip" in request ) {
+    //We have zip code - but do we have lat/lng?
+    if( !( "lat" in request ) || !( "lng" in request ) ) {
+      //We have the zip but no lat/lng - parse it and re-call
+      var response = this.ZIPtoLatLng( request.zip );
+      request.lat = response.lat;
+      request.lng = response.lng;
+      CitySDK.prototype.sdkInstance.modules.census.APIRequest(request);
     }
+  }
 
-    //Check for sublevel flag
-    if(!("sublevel" in request)) {
-        request.sublevel = false;
-    } else {
-        //If we weren't given a boolean, convert the string to a boolean
-        if(typeof request.sublevel !== typeof true) {
-            if(request.sublevel == "true") {
-                request.sublevel = true;
-            } else {
-                request.sublevel = false;
+  //Check for an address object
+  if ( "address" in request ) {
+    //We have address - but do we have lat/lng?
+    if(! ( "lat" in request ) || !( "lng" in request )) {
+      //We have the address but no lat/lng - parse it and re-call
+      var response = this.addressToFIPS( request.address.street, request.address.city, request.address.state );
+      //Take the first matched address
+      request.lat = response[0].coordinates.y;
+      request.lng = response[0].coordinates.x;
+
+      //Attach this "matched address" to the request address object so the user knows what we're using
+      request.address.addressMatch = response[0];
+
+      CitySDK.prototype.sdkInstance.modules.census.APIRequest(request);
+    }
+  }
+
+  this.parseRequestStateCode( request );
+  this.parseRequestLatLng( request );
+
+  //Check if we have latitude/longitude values. If we do, call the geocoder and get the appropriate FIPS
+  if ( "lat" in request && "lng" in request && !( "geocoded" in request )) {
+    var geographies       = this.latLngToFIPS( request.lat, request.lng );
+    var fipsData          = geographies["2010 Census Blocks"][0];
+    request["state"]      = fipsData["STATE"];
+    request["county"]     = fipsData["COUNTY"];
+    request["tract"]      = fipsData["TRACT"];
+    request["blockGroup"] = fipsData["BLKGRP"];
+    request["place"]      = ("Incorporated Places" in geographies) ? (geographies["Incorporated Places"].length > 0) ? geographies["Incorporated Places"][0]["PLACE"] : null : null;
+    request["place_name"] = ("Incorporated Places" in geographies) ? (geographies["Incorporated Places"].length > 0) ? geographies["Incorporated Places"][0]["NAME"] : null : null;
+    request.geocoded      = true;
+
+    CitySDK.prototype.sdkInstance.modules.census.APIRequest(request);
+  }
+
+  if ( "state" in request && "county" in request && "tract" in request && "blockGroup" in request ) {
+    if ( "variables" in request ) {
+      //If we don't have a data object in the request, create one
+      if (!("data" in request)) request.data = [];
+
+      //TODO: We need to create an algorithm to determine which API to call for which non-aliased variable
+      //      right now everything is in acs5 summary so it doesn't matter.
+      var response = this.acsSummaryRequest( request );
+      if ( request.sublevel ) {
+        //If sublevel is set to true, our "data" property will be an array of objects for each sublevel item.
+        request.data = [];
+        var currentVariable;
+        var currentResponseItem;
+        var currentDataObject;
+        for (var i = 1; i < response.length; i++) {
+          currentDataObject = {};
+          currentResponseItem = response[i];
+          currentDataObject["name"] = currentResponseItem[ response[0].indexOf("NAME") ];
+
+          var stateIndex = response[0].indexOf("state");
+          var countyIndex = response[0].indexOf("county");
+          var tractIndex = response[0].indexOf("tract");
+          var blockGroupIndex = response[0].indexOf("block group");
+          var placeIndex = response[0].indexOf("place");
+
+          if ( stateIndex >= 0 )
+            currentDataObject["state"] = currentResponseItem[stateIndex];
+
+          if ( countyIndex >= 0 )
+            currentDataObject["county"] = currentResponseItem[countyIndex];
+
+          if ( tractIndex >= 0 )
+            currentDataObject["tract"] = currentResponseItem[tractIndex];
+
+          if ( blockGroupIndex >= 0 )
+            currentDataObject["blockGroup"] = currentResponseItem[blockGroupIndex];
+
+          if ( placeIndex >= 0 )
+            currentDataObject["place"] = currentResponseItem[placeIndex];
+
+          for ( var j = 0; j < request.variables.length; j++ ) {
+            currentVariable = request.variables[j];
+            var parsedVariable = CitySDK.prototype.sdkInstance.modules.census.parseToVariable(currentVariable);
+            currentDataObject[currentVariable] = currentResponseItem[ response[0].indexOf( parsedVariable ) ];
+
+            if(CitySDK.prototype.sdkInstance.modules.census.isNormalizable(currentVariable)) {
+              var parsedPop = CitySDK.prototype.sdkInstance.modules.census.parseToVariable("population");
+              currentDataObject[currentVariable + "_normalized"] = currentDataObject[currentVariable]/ currentResponseItem[ response[0].indexOf( parsedPop ) ];
             }
+          }
+
+          request.data.push(currentDataObject);
         }
+      } else {
+        //We don't have sublevel, so we just grab the single response
+        var currentVariable;
+        var currentDataObject = {};
+        for ( var i = 0; i < request.variables.length; i++ ) {
+          currentVariable = request.variables[i];
+          var parsedVariable = CitySDK.prototype.sdkInstance.modules.census.parseToVariable(currentVariable);
+          currentDataObject[currentVariable] = response[1][ response[0].indexOf( parsedVariable ) ];
+
+          if ( CitySDK.prototype.sdkInstance.modules.census.isNormalizable( currentVariable ) ) {
+            var parsedPop = CitySDK.prototype.sdkInstance.modules.census.parseToVariable( "population" );
+            currentDataObject[currentVariable + "_normalized"] = currentDataObject[currentVariable]/ response[1][ response[0].indexOf( parsedPop ) ];
+          }
+
+          //Move it into an array for consistency
+          request.data = [];
+          request.data.push(currentDataObject);
+        }
+      }
+
+      delete request.geocoded;
+    }
+  } else {
+      //Is the level the US?
+      if (request.level == "us" ) {
+        //Ok, let's just resubmit it with D.C. as the "state"
+        request.state = "DC";
+        CitySDK.prototype.sdkInstance.modules.census.APIRequest(request);
+      }
+
+      //We have some container geometry but no specific location, let the supplemental requests handle the variables
+      if("containerGeometry" in request)
+        request.data = [];
     }
 
-    //Check for zip code
-    if("zip" in request) {
-        //We have zip code - but do we have lat/lng?
-        if(!("lat" in request) || !("lng" in request)) {
-            //We have the zip but no lat/lng - parse it and re-call
-            this.ZIPtoLatLng(request.zip, function(response) {
-                request.lat = response.lat;
-                request.lng = response.lng;
-                CitySDK.prototype.sdkInstance.modules.census.APIRequest(request, callback);
-                return;
-            });
-        }
-    }
-
-    //Check for an address object
-    if("address" in request) {
-        //We have address - but do we have lat/lng?
-        if(!("lat" in request) || !("lng" in request)) {
-            //We have the address but no lat/lng - parse it and re-call
-            this.addressToFIPS(request.address.street, request.address.city, request.address.state, function(response) {
-                //Take the first matched address
-                request.lat = response[0].coordinates.y;
-                request.lng = response[0].coordinates.x;
-
-                //Attach this "matched address" to the request address object so the user knows what we're using
-                request.address.addressMatch = response[0];
-
-                CitySDK.prototype.sdkInstance.modules.census.APIRequest(request, callback);
-                return;
-            })
-        }
-    }
-
-    this.parseRequestStateCode(request);
-
-    this.parseRequestLatLng(request);
-
-    //Check if we have latitude/longitude values. If we do, call the geocoder and get the appropriate FIPS
-    if("lat" in request && "lng" in request && !("geocoded" in request)) {
-        this.latLngToFIPS(request.lat, request.lng, function(geographies) {
-            //TODO: Expand this to support multiple blocks
-            var fipsData = geographies["2010 Census Blocks"][0];
-            request["state"] = fipsData["STATE"];
-            request["county"] = fipsData["COUNTY"];
-            request["tract"] = fipsData["TRACT"];
-            request["blockGroup"] = fipsData["BLKGRP"];
-            request["place"] = ("Incorporated Places" in geographies) ? (geographies["Incorporated Places"].length > 0) ? geographies["Incorporated Places"][0]["PLACE"] : null : null;
-            request["place_name"] = ("Incorporated Places" in geographies) ? (geographies["Incorporated Places"].length > 0) ? geographies["Incorporated Places"][0]["NAME"] : null : null;
-
-            request.geocoded = true;
-
-            CitySDK.prototype.sdkInstance.modules.census.APIRequest(request, callback);
-        });
-        return; //We return because the callback will fix our request into FIPs, and then call the request again
-    }
-
-    if("state" in request && "county" in request && "tract" in request && "blockGroup" in request) {
-        if("variables" in request) {
-            //If we don't have a data object in the request, create one
-            if(!("data" in request)) request.data = [];
-
-            //TODO: We need to create an algorithm to determine which API to call for which non-aliased variable
-            //      right now everything is in acs5 summary so it doesn't matter.
-            this.acsSummaryRequest(
-                request,
-                function(response) {
-                    if(request.sublevel) {
-                        //If sublevel is set to true, our "data" property will be an array of objects for each sublevel item.
-                        request.data = [];
-                        var currentVariable;
-                        var currentResponseItem;
-                        var currentDataObject;
-                        for(var i = 1; i < response.length; i++) {
-                            currentDataObject = {};
-                            currentResponseItem = response[i];
-                            currentDataObject["name"] = currentResponseItem[window.jQuery.inArray("NAME", response[0])];
-
-                            var stateIndex = window.jQuery.inArray("state", response[0]);
-                            var countyIndex = window.jQuery.inArray("county", response[0]);
-                            var tractIndex = window.jQuery.inArray("tract", response[0]);
-                            var blockGroupIndex = window.jQuery.inArray("block group", response[0]);
-                            var placeIndex = window.jQuery.inArray("place", response[0]);
-
-                            if(stateIndex >= 0) {
-                                currentDataObject["state"] = currentResponseItem[stateIndex];
-                            }
-
-                            if(countyIndex >= 0) {
-                                currentDataObject["county"] = currentResponseItem[countyIndex];
-                            }
-
-                            if(tractIndex >= 0) {
-                                currentDataObject["tract"] = currentResponseItem[tractIndex];
-                            }
-
-                            if(blockGroupIndex >= 0) {
-                                currentDataObject["blockGroup"] = currentResponseItem[blockGroupIndex];
-                            }
-
-                            if(placeIndex >= 0) {
-                                currentDataObject["place"] = currentResponseItem[placeIndex];
-                            }
-
-                            for(var j = 0; j < request.variables.length; j++) {
-                                currentVariable = request.variables[j];
-                                currentDataObject[currentVariable] = currentResponseItem[window.jQuery.inArray(CitySDK.prototype.sdkInstance.modules.census.parseToVariable(currentVariable), response[0])];
-
-                                if(CitySDK.prototype.sdkInstance.modules.census.isNormalizable(currentVariable)) {
-                                    currentDataObject[currentVariable + "_normalized"] = currentDataObject[currentVariable]/ currentResponseItem[window.jQuery.inArray(CitySDK.prototype.sdkInstance.modules.census.parseToVariable("population"), response[0])]
-                                }
-
-                            }
-
-                            request.data.push(currentDataObject);
-                        }
-                    } else {
-                        //We don't have sublevel, so we just grab the single response
-                        var currentVariable;
-                        var currentDataObject = {};
-                        for(var i = 0; i < request.variables.length; i++) {
-                            currentVariable = request.variables[i];
-                            currentDataObject[currentVariable] = response[1][window.jQuery.inArray(CitySDK.prototype.sdkInstance.modules.census.parseToVariable(currentVariable), response[0])];
-
-                            if(CitySDK.prototype.sdkInstance.modules.census.isNormalizable(currentVariable)) {
-                                currentDataObject[currentVariable + "_normalized"] = currentDataObject[currentVariable]/ response[1][window.jQuery.inArray(CitySDK.prototype.sdkInstance.modules.census.parseToVariable("population"), response[0])]
-                            }
-
-                            //Move it into an array for consistency
-                            request.data = [];
-                            request.data.push(currentDataObject);
-
-                        }
-                    }
-
-                    delete request.geocoded;
-                    callback(request);
-                }
-            );
-        } else {
-            //We have no variables remaining - use the callback on the request object
-            callback(request);
-            return;
-        }
-    } else {
-        //Is the level the US?
-        if(request.level == "us") {
-            //Ok, let's just resubmit it with D.C. as the "state"
-            request.state = "DC";
-            CitySDK.prototype.sdkInstance.modules.census.APIRequest(request, callback);
-        }
-
-        //We have some container geometry but no specific location, let the supplemental requests handle the variables
-        if("containerGeometry" in request) {
-            request.data = [];
-            callback(request);
-        }
-
-        return;
-    }
+  return request;
 };
 
 
@@ -1672,9 +1602,8 @@ CensusModule.prototype.APIRequest = function(request, callback) {
  * }
  *
  * @param {object} request The JSON request
- * @param {function} callback The callback to take the response, which is geoJSON
  */
-CensusModule.prototype.GEORequest = function(request, callback) {
+CensusModule.prototype.GEORequest = function(request) {
     //Reference dictionary of levels -> geocoder response variables
     var comparisonVariables = {
         "tract": "TRACT",
@@ -1685,82 +1614,83 @@ CensusModule.prototype.GEORequest = function(request, callback) {
 
     //First - check if we have a data object in the request OR if we aren't requesting variables
     if("data" in request || !("variables" in request)) {
-        //We have a data object for the request (or there isn't any requested), now we can get the geoJSON for the area
-        CitySDK.prototype.sdkInstance.modules.census.tigerwebRequest(request, function(response) {
-            if(!("totals" in response)) {
-                response.totals = {};
+      //We have a data object for the request (or there isn't any requested), now we can get the geoJSON for the area
+      var response = CitySDK.prototype.sdkInstance.modules.census.tigerwebRequest( request );
+      if(!("totals" in response)) {
+        response.totals = {};
+      }
+      //If we have data, let's attach it to the geoJSON
+      if("data" in request) {
+      var totals = response.totals;
+      var features = response.features;
+      var data = request.data;
+      var variables = request.variables;
+
+      for ( var i = 0; i < features.length; i++ ) {
+          matchedFeature = null;
+          //TODO: We need to tidy this grep up a bit.
+          matchedFeature = _.filter( data, function( e ){
+            //Ensure we have a direct match for low level items by comparing the higher level items
+            if( request.level == "blockGroup" || request.level == "tract" ) {
+              return e[request.level] == features[i].properties[comparisonVariables[request.level]] &&
+                e["tract"] == features[i].properties[comparisonVariables["tract"]] &&
+                e["county"] == features[i].properties[comparisonVariables["county"]];
+            } else {
+              return e[request.level] == features[i].properties[comparisonVariables[request.level]];
             }
-            //If we have data, let's attach it to the geoJSON
-            if("data" in request) {
-                var totals = response.totals;
-                var features = response.features;
-                var data = request.data;
-                var variables = request.variables;
+          });
 
-                for(var i = 0; i < features.length; i++) {
-                    matchedFeature = null;
-                    //TODO: We need to tidy this grep up a bit.
-                    matchedFeature = window.jQuery.grep(data, function(e){
-                        //Ensure we have a direct match for low level items by comparing the higher level items
-                        if(request.level == "blockGroup" || request.level == "tract") {
-                            return e[request.level] == features[i].properties[comparisonVariables[request.level]] &&
-                                e["tract"] == features[i].properties[comparisonVariables["tract"]] &&
-                                e["county"] == features[i].properties[comparisonVariables["county"]];
-                        } else {
-                            return e[request.level] == features[i].properties[comparisonVariables[request.level]];
-                        }
-                    });
+          if ( matchedFeature.length == 0 ) {
+              //Sometimes cities span multiple counties. In this case, we sometimes miss data due to the
+              //limited nature of the Census API's geography hierarchy. This will issue supplemental requests
+              //to ensure we have data for all of our geojson entities
+              var suppRequest = {
+                "state": features[i].properties["STATE"],
+                "tract": features[i].properties["TRACT"],
+                "county": features[i].properties["COUNTY"],
+                "blockGroup": features[i].properties["BLKGRP"],
+                "place": features[i].properties["PLACE"],
+                "level": request.level,
+                "variables": variables,
+                "featuresIndex": i
+              };
 
-                    if(matchedFeature.length == 0) {
-                        //Sometimes cities span multiple counties. In this case, we sometimes miss data due to the
-                        //limited nature of the Census API's geography hierarchy. This will issue supplemental requests
-                        //to ensure we have data for all of our geojson entities
-                        var suppRequest = {
-                            "state": features[i].properties["STATE"],
-                            "tract": features[i].properties["TRACT"],
-                            "county": features[i].properties["COUNTY"],
-                            "blockGroup": features[i].properties["BLKGRP"],
-                            "place": features[i].properties["PLACE"],
-                            "level": request.level,
-                            "variables": variables,
-                            "featuresIndex": i
-                        };
-
-                        CensusModule.prototype.SUPPLEMENTAL_REQUESTS_IN_FLIGHT++;
-                        CitySDK.prototype.sdkInstance.modules.census.APIRequest(suppRequest, function(resp) {
-                            CensusModule.prototype.SUPPLEMENTAL_REQUESTS_IN_FLIGHT--;
-                            for (var property in resp.data[0]) {
-                                if (resp.data[0].hasOwnProperty(property)) {
-                                    features[resp.featuresIndex].properties[property] = resp.data[0][property];
-                                    if(jQuery.inArray(property, variables) >= 0) totals[property] = Number(totals[property]) + (!isNaN(resp.data[0][property])) ? Number(resp.data[0][property]) : 0;
-                                }
-                            }
-                        });
-                    } else if(matchedFeature.length == 1) {
-                        //We have matched the feature's tract to a data tract, move the data over
-                        matchedFeature = matchedFeature[0];
-                        for (var property in matchedFeature) {
-                            if (matchedFeature.hasOwnProperty(property)) {
-                                features[i].properties[property] = matchedFeature[property];
-                                if(jQuery.inArray(property, variables) >= 0) totals[property] = Number(totals[property]) + (!isNaN(matchedFeature[property])) ? Number(matchedFeature[property]) : 0;
-                            }
-                        }
-                    } else {
-                        //This usually occurs when a low-level geography entity isn't uniquely identified
-                        //by the grep. We'll need to add more comparisons to the grep to clear this issue up.
-                        console.log("Multiple matched featues: " );
-                        console.log(features[i]);
-                        console.log(matchedFeature);
-                    }
+              CensusModule.prototype.SUPPLEMENTAL_REQUESTS_IN_FLIGHT++;
+              var resp = CitySDK.prototype.sdkInstance.modules.census.APIRequest(suppRequest);
+              CensusModule.prototype.SUPPLEMENTAL_REQUESTS_IN_FLIGHT--;
+              for (var property in resp.data[0]) {
+                if ( resp.data[0].hasOwnProperty( property ) ) {
+                  features[ resp.featuresIndex ].properties[ property ] = resp.data[0][ property ];
+                  if ( variables.indexOf( property ) >= 0 )
+                    totals[property] = Number(totals[property]) + (!isNaN(resp.data[0][property])) ? Number(resp.data[0][property]) : 0;
                 }
+              }
+
+          } else if(matchedFeature.length == 1) {
+            //We have matched the feature's tract to a data tract, move the data over
+            matchedFeature = matchedFeature[0];
+            for (var property in matchedFeature) {
+              if (matchedFeature.hasOwnProperty(property)) {
+                features[i].properties[property] = matchedFeature[property];
+                if( variables.indexOf( property ) >= 0 )
+                  totals[property] = Number(totals[property]) + (!isNaN(matchedFeature[property])) ? Number(matchedFeature[property]) : 0;
+              }
             }
-            callback(response);
-        });
+          } else {
+            //This usually occurs when a low-level geography entity isn't uniquely identified
+            //by the grep. We'll need to add more comparisons to the grep to clear this issue up.
+            console.log("Multiple matched featues: " );
+            console.log(features[i]);
+            console.log(matchedFeature);
+          }
+        }
+      }
+
+      return response;
     } else {
-        //We do not have the requested variables - let's get them
-        CitySDK.prototype.sdkInstance.modules.census.APIRequest(request, function(response) {
-                CitySDK.prototype.sdkInstance.modules.census.GEORequest(response, callback);
-        });
+      //We do not have the requested variables - let's get them
+      var response = CitySDK.prototype.sdkInstance.modules.census.APIRequest( request );
+      return CitySDK.prototype.sdkInstance.modules.census.GEORequest( response );
     }
 };
 

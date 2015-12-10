@@ -2,16 +2,16 @@
  * CitySDK
 **/
 
-//SDK instance for the callback functions
-CitySDK.prototype.sdkInstance = null;
-
 /**
  * Instantiates an instance of the CitySDK object.
  * @constructor
  */
-function CitySDK() {
+CitySDK = function CitySDK() {
     CitySDK.prototype.sdkInstance = this;
 }
+
+//SDK instance for the callback functions
+CitySDK.prototype.sdkInstance = null;
 
 /**
  * Stores each module
@@ -25,11 +25,11 @@ CitySDK.prototype.modules = {};
  * @return {promise} Returns a standard ajax promise
  */
 CitySDK.prototype.ajaxRequest = function(url) {
-    return $.ajax({
-        type: 'GET',
+    return HTTP.get( url, {
+      headers: {
         dataType: 'text',
         contentType: 'text/plain',
-        url: url
+      }
     });
 };
 
@@ -39,11 +39,11 @@ CitySDK.prototype.ajaxRequest = function(url) {
  * @return {object} Returns a standard ajax promise
  */
 CitySDK.prototype.jsonpRequest = function(url) {
-    return $.ajax({
-        type: 'GET',
-        dataType: "jsonp",
-        contentType: 'text/plain',
-        url: url
+    return HTTP.get( url, {
+      headers: {
+        dataType: "json",
+        contentType: 'application/json'
+      }
     });
 };
 
@@ -54,10 +54,8 @@ CitySDK.prototype.jsonpRequest = function(url) {
  * @returns {*}
  */
 CitySDK.prototype.postRequest = function(url, data) {
-    return $.ajax({
-        type: "POST",
-        url: url,
+    return HTTP.post( url, {
         data: data,
-        dataType: "text"
+        headers: { dataType: "text" }
     });
 };

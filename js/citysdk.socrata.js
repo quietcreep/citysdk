@@ -8,13 +8,13 @@ CitySDK.prototype.modules.socrata = new SocrataModule();
 
 //Module object definition. Every module should have an "enabled" property and an "enable"  function.
 function SocrataModule() {
-    this.enabled = false;
-    this.applicationToken = null;
+  this.enabled = false;
+  this.applicationToken = null;
 };
 
 //Enable function. No API key required
 SocrataModule.prototype.enable = function() {
-    this.enabled = true;
+  this.enabled = true;
 };
 
 /**
@@ -60,33 +60,30 @@ SocrataModule.prototype.enable = function() {
  * @param callback
  */
 SocrataModule.prototype.request = function(request, callback) {
-    var urlPattern = /({url})/;
-    var datasetPattern = /({dataset})/;
+  var urlPattern = /({url})/;
+  var datasetPattern = /({dataset})/;
 
-    var socrataURL = "https://{url}/resource/{dataset}.json";
+  var socrataURL = "https://{url}/resource/{dataset}.json";
 
-    socrataURL = socrataURL.replace(urlPattern, request.url);
-    socrataURL = socrataURL.replace(datasetPattern, request.dataset);
+  socrataURL = socrataURL.replace(urlPattern, request.url);
+  socrataURL = socrataURL.replace(datasetPattern, request.dataset);
 
-    for (var key in request) {
-        if (request.hasOwnProperty(key)) {
-            if(key != "url" && key != "dataset") {
-                if(socrataURL.indexOf("?") < 0) socrataURL+="?";
-                socrataURL += "$" + key + "=" + encodeURIComponent(request[key]) + "&";
-            }
-        }
+  for ( var key in request ) {
+    if ( request.hasOwnProperty( key )) {
+      if ( key != "url" && key != "dataset" ) {
+        if ( socrataURL.indexOf("?") < 0)
+          socrataURL+="?";
+        socrataURL += "$" + key + "=" + encodeURIComponent( request[key] ) + "&";
+      }
     }
+  }
 
-    if(this.applicationToken) {
-        socrataURL += "$$app_token=" + this.applicationToken;
-    }
+  if( this.applicationToken )
+    socrataURL += "$$app_token=" + this.applicationToken;
 
-    CitySDK.prototype.sdkInstance.ajaxRequest(socrataURL).done(
-        function(response) {
-            response = $.parseJSON(response);
-            callback(response);
-        }
-    );
+  var response = CitySDK.prototype.sdkInstance.ajaxRequest( socrataURL );
+  response = JSON.parse( response.content );
+  return response;
 };
 
 /**

@@ -62,37 +62,32 @@ CkanModule.prototype.enable = function() {
  * }
  *
  * @param request
- * @param callback
  */
-CkanModule.prototype.search = function(request, callback) {
-    var urlPattern = /({url})/;
+CkanModule.prototype.search = function( request ) {
+  var urlPattern  = /({url})/,
+      ckanURL     = "https://{url}/api/action/datastore_search_sql?sql=",
+      limit       = false;
 
-    var ckanURL = "https://{url}/api/action/datastore_search_sql?sql=";
+  ckanURL = ckanURL.replace( urlPattern, request.url );
 
-    ckanURL = ckanURL.replace(urlPattern, request.url);
-
-    var limit = false;
-
-    for (var key in request) {
-        if (request.hasOwnProperty(key)) {
-            if (key != "url") {
-                ckanURL += encodeURIComponent(key) + '%20' + encodeURIComponent(request[key]) + '%20';
-                if (key.toLowerCase() == "limit") { limit = true }
-            }
-        }
+  for ( var key in request ) {
+    if ( request.hasOwnProperty( key ) ) {
+      if ( key != "url" ) {
+        ckanURL += encodeURIComponent( key ) + '%20' + encodeURIComponent( request[key] ) + '%20';
+        if ( key.toLowerCase() == "limit" )
+          limit = true;
+      }
     }
+  }
 
-    if (!limit) {
-        ckanURL += 'Limit%201000';  //Limit results to 1000 records by default
-    }
+  if (!limit)
+    ckanURL += 'Limit%201000';  //Limit results to 1000 records by default
 
-    CitySDK.prototype.sdkInstance.ajaxRequest(ckanURL).done(
-        function(response) {
-            response = $.parseJSON(response);
-            callback(response);
-        }
-    );
+  var response = CitySDK.prototype.sdkInstance.ajaxRequest(ckanURL)
+  response = JSON.parse( response.content );
+  return response;
 };
+
 
 //After this point the module is all up to you
 //References to an instance of the SDK should be called as:

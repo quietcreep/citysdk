@@ -43,53 +43,49 @@ FarmersMarketModule.prototype.enable = function() {
  * @param callback
  */
 FarmersMarketModule.prototype.search = function(request, callback) {
-    var latPattern = /({lat})/;
-    var lngPattern = /({lng})/;
-    var zipPattern = /({zip})/;
+  var latPattern = /({lat})/;
+  var lngPattern = /({lng})/;
+  var zipPattern = /({zip})/;
 
-    var fragmentPattern = /({fragment})/;
+  var fragmentPattern = /({fragment})/;
 
-    //Check for geographical data
-    //Allow the users to use either x,y; lat,lng; latitude,longitude to sepecify co-ordinates
-    if(!("lat" in request)) {
-        if("latitude" in request) {
-            request.lat = request.latitude;
-            delete request.latitude;
-        } else if ("y" in request) {
-            request.lat = request.y;
-            delete request.y;
-        }
+  //Check for geographical data
+  //Allow the users to use either x,y; lat,lng; latitude,longitude to sepecify co-ordinates
+  if (! ( "lat" in request )) {
+    if ( "latitude" in request ) {
+      request.lat = request.latitude;
+      delete request.latitude;
+    } else if ("y" in request) {
+      request.lat = request.y;
+      delete request.y;
     }
+  }
 
-    if(!("lng" in request)) {
-        if("longitude" in request) {
-            request.lng = request.longitude;
-            delete request.longitude;
-        } else if("x" in request) {
-            request.lng = request.x;
-            delete request.x;
-        }
+  if (! ( "lng" in request )) {
+    if ( "longitude" in request ) {
+      request.lng = request.longitude;
+      delete request.longitude;
+    } else if( "x" in request ) {
+      request.lng = request.x;
+      delete request.x;
     }
+  }
 
-    var zipFragment = "zipSearch?zip={zip}";
-    var locFragment = "locSearch?lat={lat}&lng={lng}";
+  var zipFragment = "zipSearch?zip={zip}";
+  var locFragment = "locSearch?lat={lat}&lng={lng}";
 
-    var farmersMarketURL = "http://search.ams.usda.gov/farmersmarkets/v1/data.svc/{fragment}";
-    if("lat" in request && "lng" in request) {
-        farmersMarketURL = farmersMarketURL.replace(fragmentPattern, locFragment);
-    } else {
-        farmersMarketURL = farmersMarketURL.replace(fragmentPattern, zipFragment);
-    }
+  var farmersMarketURL = "http://search.ams.usda.gov/farmersmarkets/v1/data.svc/{fragment}";
+  if ( "lat" in request && "lng" in request )
+    farmersMarketURL = farmersMarketURL.replace(fragmentPattern, locFragment);
+  else
+    farmersMarketURL = farmersMarketURL.replace(fragmentPattern, zipFragment);
 
-    farmersMarketURL = farmersMarketURL.replace(zipPattern, request.zip);
-    farmersMarketURL = farmersMarketURL.replace(latPattern, request.lat);
-    farmersMarketURL = farmersMarketURL.replace(lngPattern, request.lng);
+  farmersMarketURL = farmersMarketURL.replace( zipPattern, request.zip );
+  farmersMarketURL = farmersMarketURL.replace( latPattern, request.lat );
+  farmersMarketURL = farmersMarketURL.replace( lngPattern, request.lng );
 
-    CitySDK.prototype.sdkInstance.jsonpRequest(farmersMarketURL).done(
-        function(response) {
-            callback(response);
-        }
-    );
+  var response = CitySDK.prototype.sdkInstance.jsonpRequest( farmersMarketURL );
+  return response;
 };
 
 /**
@@ -112,17 +108,13 @@ FarmersMarketModule.prototype.search = function(request, callback) {
  * @param callback
  */
 FarmersMarketModule.prototype.detail = function(request, callback) {
-    var idPattern = /({id})/;
+  var idPattern = /({id})/,
+      detailURL = "http://search.ams.usda.gov/farmersmarkets/v1/data.svc/mktDetail?id={id}";
 
-    var detailURL = "http://search.ams.usda.gov/farmersmarkets/v1/data.svc/mktDetail?id={id}";
+  detailURL = detailURL.replace( idPattern, request.id );
 
-    detailURL = detailURL.replace(idPattern, request.id);
-
-    CitySDK.prototype.sdkInstance.jsonpRequest(detailURL).done(
-        function(response) {
-            callback(response);
-        }
-    );
+  var response = CitySDK.prototype.sdkInstance.jsonpRequest( detailURL );
+  return response;
 };
 
 //After this point the module is all up to you

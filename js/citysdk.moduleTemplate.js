@@ -8,13 +8,13 @@ CitySDK.prototype.modules.moduleTemplate = new ModuleTemplateModule();
 
 //Module object definition. Every module should have an "enabled" property and an "enable"  function.
 function ModuleTemplateModule() {
-    this.enabled = false;
+  this.enabled = false;
 };
 
 //Enable function. Stores the API key for this module and sets it as enabled
 ModuleTemplateModule.prototype.enable = function(apiKey) {
-    this.apiKey = apiKey;
-    this.enabled = true;
+  this.apiKey = apiKey;
+  this.enabled = true;
 };
 
 //After this point the module is all up to you
