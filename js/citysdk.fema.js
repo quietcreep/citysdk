@@ -12,6 +12,20 @@ function FEMAModule() {
   this.iso8601reg = /^([\+-]?\d{4}(?!\d{2}\b))((-?)((0[1-9]|1[0-2])(\3([12]\d|0[1-9]|3[01]))?|W([0-4]\d|5[0-2])(-?[1-7])?|(00[1-9]|0[1-9]\d|[12]\d{2}|3([0-5]\d|6[1-6])))([T\s]((([01]\d|2[0-3])((:?)[0-5]\d)?|24\:?00)([\.,]\d+(?!:))?)?(\17[0-5]\d([\.,]\d+)?)?([zZ]|([\+-])([01]\d|2[0-3]):?([0-5]\d)?)?)?)?$/;
 };
 
+
+// shortcuts for readability
+Object.defineProperties( FEMAModule.prototype, {
+  'sdkInstance': {
+    get: function(){ return CitySDK.prototype.sdkInstance },
+    set: function(){ return CitySDK.prototype.sdkInstance },
+  },
+  'instance': {
+    get: function(){ return this.sdkInstance.modules.fema },
+    set: function(){ return this.sdkInstance.modules.fema },
+  },
+});
+
+
 //Enable function. Stores the API key for this module and sets it as enabled
 FEMAModule.prototype.enable = function() {
   this.enabled = true;
@@ -92,7 +106,8 @@ FEMAModule.prototype.enable = function() {
 FEMAModule.prototype.DisasterDeclarationsSummariesRequest = function(request, callback) {
   var addedFilter = false,
       addedSkip   = false,
-      disasterURL = "https://www.fema.gov/api/open/v1/DisasterDeclarationsSummaries?";
+      disasterURL = "https://www.fema.gov/api/open/v1/DisasterDeclarationsSummaries?",
+      response;
 
   if ( "disasterNumber" in request && Number( request.disasterNumber )) {
     if (! addedFilter ){
@@ -124,7 +139,7 @@ FEMAModule.prototype.DisasterDeclarationsSummariesRequest = function(request, ca
     }
   }
 
-  if("declarationRangeStart" in request && CitySDK.prototype.sdkInstance.modules.fema.isIso8601Date(request.declarationRangeStart)) {
+  if("declarationRangeStart" in request && this.instance.isIso8601Date(request.declarationRangeStart)) {
     if (!addedFilter){
       disasterURL += "$filter=";
       disasterURL += "declarationDate ge '" + request.declarationRangeStart + "'";
@@ -133,7 +148,7 @@ FEMAModule.prototype.DisasterDeclarationsSummariesRequest = function(request, ca
       disasterURL += " and declarationDate ge '" + request.declarationRangeStart + "'";
     }
   }
-  if ( "declarationRangeStart" in request && CitySDK.prototype.sdkInstance.modules.fema.isIso8601Date( request.declarationRangeEnd )) {
+  if ( "declarationRangeStart" in request && this.instance.isIso8601Date( request.declarationRangeEnd )) {
     if ( !addedFilter ){
       disasterURL += "$filter=";
       disasterURL += "declarationDate le '" + request.declarationRangeEnd + "'";
@@ -157,18 +172,11 @@ FEMAModule.prototype.DisasterDeclarationsSummariesRequest = function(request, ca
     disasterURL += "$top=" + Number( request.take ); //Default - root list of all datasets
   }
 
-  var response = CitySDK.prototype.sdkInstance.ajaxRequest( disasterURL );
+  response = this.sdkInstance.ajaxRequest( disasterURL );
   response = JSON.parse( response.content );
   return response;
 };
 
-FEMAModule.prototype.isIso8601Date = function(dateString) {
-    return CitySDK.prototype.sdkInstance.modules.fema.iso8601reg.test(dateString);
+FEMAModule.prototype.isIso8601Date = function( dateString ) {
+  return this.instance.iso8601reg.test( dateString );
 }
-
-//After this point the module is all up to you
-//References to an instance of the SDK should be called as:
-CitySDK.prototype.sdkInstance;
-//And references to this module should be called as
-CitySDK.prototype.modules.fema;
-//when 'this' is ambiguous

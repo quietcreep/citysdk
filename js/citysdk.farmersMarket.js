@@ -9,12 +9,24 @@ CitySDK.prototype.modules.farmersMarket = new FarmersMarketModule();
 
 //Module object definition. Every module should have an "enabled" property and an "enable"  function.
 function FarmersMarketModule() {
-    this.enabled = false;
+  this.enabled = false;
 };
+
+// shortcuts for readability
+Object.defineProperties( FarmersMarketModule.prototype, {
+  'sdkInstance': {
+    get: function(){ return CitySDK.prototype.sdkInstance },
+    set: function(){ return CitySDK.prototype.sdkInstance },
+  },
+  'instance': {
+    get: function(){ return this.sdkInstance.modules.farmersMarket },
+    set: function(){ return this.sdkInstance.modules.farmersMarket },
+  },
+});
 
 //Enable function. Stores the API key for this module and sets it as enabled
 FarmersMarketModule.prototype.enable = function() {
-    this.enabled = true;
+  this.enabled = true;
 };
 
 /**
@@ -84,7 +96,7 @@ FarmersMarketModule.prototype.search = function(request, callback) {
   farmersMarketURL = farmersMarketURL.replace( latPattern, request.lat );
   farmersMarketURL = farmersMarketURL.replace( lngPattern, request.lng );
 
-  var response = CitySDK.prototype.sdkInstance.jsonpRequest( farmersMarketURL );
+  var response = this.sdkInstance.jsonpRequest( farmersMarketURL );
   return response;
 };
 
@@ -113,13 +125,6 @@ FarmersMarketModule.prototype.detail = function(request, callback) {
 
   detailURL = detailURL.replace( idPattern, request.id );
 
-  var response = CitySDK.prototype.sdkInstance.jsonpRequest( detailURL );
+  var response = this.sdkInstance.jsonpRequest( detailURL );
   return response;
 };
-
-//After this point the module is all up to you
-//References to an instance of the SDK should be called as:
-CitySDK.prototype.sdkInstance;
-//And references to this module should be called as
-CitySDK.prototype.modules.farmersMarket;
-//when 'this' is ambiguous

@@ -12,6 +12,20 @@ function SocrataModule() {
   this.applicationToken = null;
 };
 
+
+// shortcuts for readability
+Object.defineProperties( SocrataModule.prototype, {
+  'sdkInstance': {
+    get: function(){ return CitySDK.prototype.sdkInstance },
+    set: function(){ return CitySDK.prototype.sdkInstance },
+  },
+  'instance': {
+    get: function(){ return this.sdkInstance.modules.socrata },
+    set: function(){ return this.sdkInstance.modules.socrata },
+  },
+});
+
+
 //Enable function. No API key required
 SocrataModule.prototype.enable = function() {
   this.enabled = true;
@@ -60,10 +74,9 @@ SocrataModule.prototype.enable = function() {
  * @param callback
  */
 SocrataModule.prototype.request = function(request, callback) {
-  var urlPattern = /({url})/;
-  var datasetPattern = /({dataset})/;
-
-  var socrataURL = "https://{url}/resource/{dataset}.json";
+  var urlPattern      = /({url})/,
+      datasetPattern  = /({dataset})/,
+      socrataURL      = "https://{url}/resource/{dataset}.json";
 
   socrataURL = socrataURL.replace(urlPattern, request.url);
   socrataURL = socrataURL.replace(datasetPattern, request.dataset);
@@ -72,17 +85,17 @@ SocrataModule.prototype.request = function(request, callback) {
     if ( request.hasOwnProperty( key )) {
       if ( key != "url" && key != "dataset" ) {
         if ( socrataURL.indexOf("?") < 0)
-          socrataURL+="?";
+          socrataURL += "?";
         socrataURL += "$" + key + "=" + encodeURIComponent( request[key] ) + "&";
       }
     }
   }
 
-  if( this.applicationToken )
+  if ( this.applicationToken )
     socrataURL += "$$app_token=" + this.applicationToken;
 
-  var response = CitySDK.prototype.sdkInstance.ajaxRequest( socrataURL );
-  response = JSON.parse( response.content );
+  var response  = this.sdkInstance.ajaxRequest( socrataURL );
+  response      = JSON.parse( response.content );
   return response;
 };
 
@@ -93,12 +106,12 @@ SocrataModule.prototype.request = function(request, callback) {
  * @param token
  */
 SocrataModule.prototype.setApplicationToken = function(token) {
-    this.applicationToken = token;
+  this.applicationToken = token;
 };
 
-//After this point the module is all up to you
-//References to an instance of the SDK should be called as:
-CitySDK.prototype.sdkInstance;
-//And references to this module should be called as
-CitySDK.prototype.modules.socrata;
-//when 'this' is ambiguous
+// After this point the module is all up to you
+// References to an instance of the SDK should be called as:
+// this.sdkInstance;
+
+// And references to this module should be called as
+// this.instance;

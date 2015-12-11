@@ -8,12 +8,26 @@ CitySDK.prototype.modules.ckan = new CkanModule();
 
 //Module object definition. Every module should have an "enabled" property and an "enable"  function.
 function CkanModule() {
-    this.enabled = false;
+  this.enabled = false;
 };
+
+
+// shortcuts for readability
+Object.defineProperties( CkanModule.prototype, {
+  'sdkInstance': {
+    get: function(){ return CitySDK.prototype.sdkInstance },
+    set: function(){ return CitySDK.prototype.sdkInstance },
+  },
+  'instance': {
+    get: function(){ return this.sdkInstance.modules.ckan },
+    set: function(){ return this.sdkInstance.modules.ckan },
+  },
+});
+
 
 //Enable function.
 CkanModule.prototype.enable = function() {
-    this.enabled = true;
+  this.enabled = true;
 };
 
 /**
@@ -66,7 +80,8 @@ CkanModule.prototype.enable = function() {
 CkanModule.prototype.search = function( request ) {
   var urlPattern  = /({url})/,
       ckanURL     = "https://{url}/api/action/datastore_search_sql?sql=",
-      limit       = false;
+      limit       = false,
+      response;
 
   ckanURL = ckanURL.replace( urlPattern, request.url );
 
@@ -83,15 +98,7 @@ CkanModule.prototype.search = function( request ) {
   if (!limit)
     ckanURL += 'Limit%201000';  //Limit results to 1000 records by default
 
-  var response = CitySDK.prototype.sdkInstance.ajaxRequest(ckanURL)
+  response = this.sdkInstance.ajaxRequest(ckanURL)
   response = JSON.parse( response.content );
   return response;
 };
-
-
-//After this point the module is all up to you
-//References to an instance of the SDK should be called as:
-CitySDK.prototype.sdkInstance;
-//And references to this module should be called as
-CitySDK.prototype.modules.ckan;
-//when 'this' is ambiguous

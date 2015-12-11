@@ -9,13 +9,27 @@ CitySDK.prototype.modules.eia = new EIAModule();
 
 //Module object definition. Every module should have an "enabled" property and an "enable"  function.
 function EIAModule() {
-    this.enabled = false;
+  this.enabled = false;
 };
+
+
+// shortcuts for readability
+Object.defineProperties( EIAModule.prototype, {
+  'sdkInstance': {
+    get: function(){ return CitySDK.prototype.sdkInstance },
+    set: function(){ return CitySDK.prototype.sdkInstance },
+  },
+  'instance': {
+    get: function(){ return this.sdkInstance.modules.eia },
+    set: function(){ return this.sdkInstance.modules.eia },
+  },
+});
+
 
 //Enable function. Stores the API key for this module and sets it as enabled
 EIAModule.prototype.enable = function(apiKey) {
-    this.apiKey = apiKey;
-    this.enabled = true;
+  this.apiKey = apiKey;
+  this.enabled = true;
 };
 
 /**
@@ -30,18 +44,18 @@ EIAModule.prototype.enable = function(apiKey) {
  * @param callback
  */
 EIAModule.prototype.categoryRequest = function(request, callback) {
-  var apiKeyPattern = /({apiKey})/;
-  var categoryPattern = /({category})/;
-
-  var categoryURL = "http://api.eia.gov/category/?api_key={apiKey}&category_id={category}";
+  var apiKeyPattern = /({apiKey})/,
+      categoryPattern = /({category})/,
+      categoryURL = "http://api.eia.gov/category/?api_key={apiKey}&category_id={category}",
+      response;
 
   if(! ( "category" in request ))
     request.category = 371; //Default - root list of all datasets
 
-  categoryURL = categoryURL.replace(apiKeyPattern, this.apiKey);
-  categoryURL = categoryURL.replace(categoryPattern, request.category);
+  categoryURL = categoryURL.replace( apiKeyPattern, this.apiKey );
+  categoryURL = categoryURL.replace( categoryPattern, request.category );
 
-  var response = CitySDK.prototype.sdkInstance.ajaxRequest(categoryURL);
+  response = this.sdkInstance.ajaxRequest( categoryURL );
   response = JSON.parse( response.content );
   return response;
 };
@@ -59,24 +73,17 @@ EIAModule.prototype.categoryRequest = function(request, callback) {
  * @param callback
  */
 EIAModule.prototype.seriesRequest = function(request, callback) {
-    var apiKeyPattern = /({apiKey})/;
-    var seriesPattern = /({series})/;
+  var apiKeyPattern = /({apiKey})/,
+      seriesPattern = /({series})/,
+      seriesURL = "http://api.eia.gov/series/?api_key={apiKey}&series_id={series}",
+      response;
 
-    var seriesURL = "http://api.eia.gov/series/?api_key={apiKey}&series_id={series}"
+  if (! ("series" in request )) return;
 
-    if(!("series" in request)) return;
+  seriesURL = seriesURL.replace(apiKeyPattern, this.apiKey);
+  seriesURL = seriesURL.replace(seriesPattern, request.series);
 
-    seriesURL = seriesURL.replace(apiKeyPattern, this.apiKey);
-    seriesURL = seriesURL.replace(seriesPattern, request.series);
-
-    var response = CitySDK.prototype.sdkInstance.ajaxRequest(seriesURL);
-    response = JSON.parse( response.content );
-    return response;
+  response = this.sdkInstance.ajaxRequest(seriesURL);
+  response = JSON.parse( response.content );
+  return response;
 };
-
-//After this point the module is all up to you
-//References to an instance of the SDK should be called as:
-CitySDK.prototype.sdkInstance;
-//And references to this module should be called as
-CitySDK.prototype.modules.eia;
-//when 'this' is ambiguous

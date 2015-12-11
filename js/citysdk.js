@@ -7,7 +7,7 @@
  * @constructor
  */
 CitySDK = function CitySDK() {
-    CitySDK.prototype.sdkInstance = this;
+  CitySDK.prototype.sdkInstance = this;
 }
 
 //SDK instance for the callback functions
@@ -25,12 +25,12 @@ CitySDK.prototype.modules = {};
  * @return {promise} Returns a standard ajax promise
  */
 CitySDK.prototype.ajaxRequest = function(url) {
-    return HTTP.get( url, {
-      headers: {
-        dataType: 'text',
-        contentType: 'text/plain',
-      }
-    });
+  return HTTP.get( url, {
+    headers: {
+      dataType: 'text',
+      contentType: 'text/plain',
+    }
+  });
 };
 
 /**
@@ -39,12 +39,12 @@ CitySDK.prototype.ajaxRequest = function(url) {
  * @return {object} Returns a standard ajax promise
  */
 CitySDK.prototype.jsonpRequest = function(url) {
-    return HTTP.get( url, {
-      headers: {
-        dataType: "json",
-        contentType: 'application/json'
-      }
-    });
+  return HTTP.get( url, {
+    headers: {
+      dataType: "json",
+      contentType: 'application/json'
+    }
+  });
 };
 
 /**
@@ -54,8 +54,8 @@ CitySDK.prototype.jsonpRequest = function(url) {
  * @returns {*}
  */
 CitySDK.prototype.postRequest = function(url, data) {
-    return HTTP.post( url, {
-        data: data,
-        headers: { dataType: "text" }
-    });
+  return HTTP.post( url, {
+    data: data,
+    headers: { dataType: "text" }
+  });
 };

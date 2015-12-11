@@ -4,14 +4,15 @@
 
 var debug = false;
 
+//Module object definition. Every module should have an "enabled" property and an "enable"  function.
+CensusModule = function CensusModule() {
+    this.enabled = false;
+};
+
 //Attach a new module object to the CitySDK prototype.
 //It is advised to keep the filenames and module property names the same
 CitySDK.prototype.modules.census = new CensusModule();
 
-//Module object definition. Every module should have an "enabled" property and an "enable"  function.
-function CensusModule() {
-    this.enabled = false;
-};
 
 //Enable function. Stores the API key for this module and sets it as enabled
 CensusModule.prototype.enable = function(apiKey) {
@@ -22,12 +23,25 @@ CensusModule.prototype.enable = function(apiKey) {
 //After this point the module is all up to you
 
 //Defaults
-CensusModule.prototype.DEFAULT_YEAR = 2013;
+CensusModule.prototype.DEFAULT_YEAR = 2014;
 CensusModule.prototype.DEFAULT_LEVEL = "blockGroup";
 CensusModule.prototype.DEFAULT_API = "acs5";
 
 //Global variables for supplemental georequests
 CensusModule.prototype.SUPPLEMENTAL_REQUESTS_IN_FLIGHT = 0;
+
+
+// shortcuts for readability
+Object.defineProperties( CensusModule.prototype, {
+  'sdkInstance': {
+    get: function(){ return CitySDK.prototype.sdkInstance },
+    set: function(){ return CitySDK.prototype.sdkInstance },
+  },
+  'instance': {
+    get: function(){ return this.sdkInstance.modules.census },
+    set: function(){ return this.sdkInstance.modules.census },
+  },
+});
 
 
 /**
@@ -38,7 +52,8 @@ CensusModule.prototype.acsyears = {
     "2010": ["acs5"],
     "2011": ["acs5"],
     "2012": ["acs5", "acs3", "acs1"],
-    "2013": ["acs5", "acs3", "acs1"]
+    "2013": ["acs5", "acs3", "acs1"],
+    "2014": ["acs5", "acs1"]
 };
 
 
@@ -140,652 +155,7 @@ var usBoundingBox = {
     ]
 };
 
-/**
- * Dictionary of aliases, string alias -> object with variable and description
- * @type {object} Object with properties of aliased variable, each having an object specifying the api, true variable, and description
- */
-CensusModule.prototype.aliases = {
-    //Economic Variables
-    "income": {
-        "api": "acs",
-        "variable": "B19013_001E",
-        "description": "Median household income in the past 12 months (in 2013 inflation-adjusted dollars)"
-    },
-    "income_per_capita": {
-        "api": "acs",
-        "variable": "B19301_001E",
-        "description": "Per capita income in the past 12 months (in 2013 inflation-adjusted dollars)"
-    },
 
-    //Employment Status
-    "employment_labor_force": {
-        "api": "acs",
-        "variable": "B23025_002E",
-        "description": "Number of persons, age 16 or older, in the labor force"
-    },
-    "employment_not_labor_force": {
-        "api": "acs",
-        "variable": "B23025_007E",
-        "description": "Number of persons, age 16 or older, not in the labor force"
-    },
-    "employment_civilian_labor_force": {
-        "api": "acs",
-        "variable": "B23025_003E",
-        "description": "Number of persons, age 16 or older, in the civilian labor force"
-    },
-    "employment_employed": {
-        "api": "acs",
-        "variable": "B23025_004E",
-        "description": "Number of employed, age 16 or older, in the civilian labor force"
-    },
-    "employment_unemployed": {
-        "api": "acs",
-        "variable": "B23025_005E",
-        "description": "Number of unemployed, age 16 or older, in the civilian labor force"
-    },
-    "employment_armed_forces": {
-        "api": "acs",
-        "variable": "B23025_006E",
-        "description": "Number of persons, age 16 or older, in the Armed Forces"
-    },
-    "employment_male_management_business_science_and_arts_occupations": {
-        "api": "acs",
-        "variable": "C24010_003E",
-        "description": "Number of employed male 'Management, business, science, and arts occupations:' for the civilian population age 16 and over"
-    },
-    "employment_male_management_business_and_financial_occupations": {
-        "api": "acs",
-        "variable": "C24010_004E",
-        "description": "Number of employed male 'Management, business, and financial occupations:' for the civilian population age 16 and over"
-    },
-    "employment_male_management_occupations": {
-        "api": "acs",
-        "variable": "C24010_005E",
-        "description": "Number of employed male 'Management occupations' for the civilian population age 16 and over"
-    },
-    "employment_male_business_and_financial_operations_occupations": {
-        "api": "acs",
-        "variable": "C24010_006E",
-        "description": "Number of employed male 'Business and financial operations occupations' for the civilian population age 16 and over"
-    },
-    "employment_male_computer_engineering_and_science_occupations": {
-        "api": "acs",
-        "variable": "C24010_007E",
-        "description": "Number of employed male 'Computer, engineering, and science occupations:' for the civilian population age 16 and over"
-    },
-    "employment_male_computer_and_mathematical_occupations": {
-        "api": "acs",
-        "variable": "C24010_008E",
-        "description": "Number of employed male 'Computer and mathematical occupations' for the civilian population age 16 and over"
-    },
-    "employment_male_architecture_and_engineering_occupations": {
-        "api": "acs",
-        "variable": "C24010_009E",
-        "description": "Number of employed male 'Architecture and engineering occupations' for the civilian population age 16 and over"
-    },
-    "employment_male_life_physical_and_social_science_occupations": {
-        "api": "acs",
-        "variable": "C24010_010E",
-        "description": "Number of employed male 'Life, physical, and social science occupations' for the civilian population age 16 and over"
-    },
-    "employment_male_education_legal_community_service_arts_and_media_occupations": {
-        "api": "acs",
-        "variable": "C24010_011E",
-        "description": "Number of employed male 'Education, legal, community service, arts, and media occupations:' for the civilian population age 16 and over"
-    },
-    "employment_male_community_and_social_service_occupations": {
-        "api": "acs",
-        "variable": "C24010_012E",
-        "description": "Number of employed male 'Community and social service occupations' for the civilian population age 16 and over"
-    },
-    "employment_male_legal_occupations": {
-        "api": "acs",
-        "variable": "C24010_013E",
-        "description": "Number of employed male 'Legal occupations' for the civilian population age 16 and over"
-    },
-    "employment_male_education_training_and_library_occupations": {
-        "api": "acs",
-        "variable": "C24010_014E",
-        "description": "Number of employed male 'Education, training, and library occupations' for the civilian population age 16 and over"
-    },
-    "employment_male_arts_design_entertainment_sports_and_media_occupations": {
-        "api": "acs",
-        "variable": "C24010_015E",
-        "description": "Number of employed male 'Arts, design, entertainment, sports, and media occupations' for the civilian population age 16 and over"
-    },
-    "employment_male_healthcare_practitioners_and_technical_occupations": {
-        "api": "acs",
-        "variable": "C24010_016E",
-        "description": "Number of employed male 'Healthcare practitioners and technical occupations:' for the civilian population age 16 and over"
-    },
-    "employment_male_health_diagnosing_and_treating_practitioners_and_other_technical_occupations": {
-        "api": "acs",
-        "variable": "C24010_017E",
-        "description": "Number of employed male 'Health diagnosing and treating practitioners and other technical occupations' for the civilian population age 16 and over"
-    },
-    "employment_male_health_technologists_and_technicians": {
-        "api": "acs",
-        "variable": "C24010_018E",
-        "description": "Number of employed male 'Health technologists and technicians' for the civilian population age 16 and over"
-    },
-    "employment_male_service_occupations": {
-        "api": "acs",
-        "variable": "C24010_019E",
-        "description": "Number of employed male 'Service occupations:' for the civilian population age 16 and over"
-    },
-    "employment_male_healthcare_support_occupations": {
-        "api": "acs",
-        "variable": "C24010_020E",
-        "description": "Number of employed male 'Healthcare support occupations' for the civilian population age 16 and over"
-    },
-    "employment_male_protective_service_occupations": {
-        "api": "acs",
-        "variable": "C24010_021E",
-        "description": "Number of employed male 'Protective service occupations:' for the civilian population age 16 and over"
-    },
-    "employment_male_fire_fighting_and_prevention_and_other_protective_service_workers_including_supervisors": {
-        "api": "acs",
-        "variable": "C24010_022E",
-        "description": "Number of employed male 'Fire fighting and prevention, and other protective service workers including supervisors' for the civilian population age 16 and over"
-    },
-    "employment_male_law_enforcement_workers_including_supervisors": {
-        "api": "acs",
-        "variable": "C24010_023E",
-        "description": "Number of employed male 'Law enforcement workers including supervisors' for the civilian population age 16 and over"
-    },
-    "employment_male_food_preparation_and_serving_related_occupations": {
-        "api": "acs",
-        "variable": "C24010_024E",
-        "description": "Number of employed male 'Food preparation and serving related occupations' for the civilian population age 16 and over"
-    },
-    "employment_male_building_and_grounds_cleaning_and_maintenance_occupations": {
-        "api": "acs",
-        "variable": "C24010_025E",
-        "description": "Number of employed male 'Building and grounds cleaning and maintenance occupations' for the civilian population age 16 and over"
-    },
-    "employment_male_personal_care_and_service_occupations": {
-        "api": "acs",
-        "variable": "C24010_026E",
-        "description": "Number of employed male 'Personal care and service occupations' for the civilian population age 16 and over"
-    },
-    "employment_male_sales_and_office_occupations": {
-        "api": "acs",
-        "variable": "C24010_027E",
-        "description": "Number of employed male 'Sales and office occupations:' for the civilian population age 16 and over"
-    },
-    "employment_male_sales_and_related_occupations": {
-        "api": "acs",
-        "variable": "C24010_028E",
-        "description": "Number of employed male 'Sales and related occupations' for the civilian population age 16 and over"
-    },
-    "employment_male_office_and_administrative_support_occupations": {
-        "api": "acs",
-        "variable": "C24010_029E",
-        "description": "Number of employed male 'Office and administrative support occupations' for the civilian population age 16 and over"
-    },
-    "employment_male_natural_resources_construction_and_maintenance_occupations": {
-        "api": "acs",
-        "variable": "C24010_030E",
-        "description": "Number of employed male 'Natural resources, construction, and maintenance occupations:' for the civilian population age 16 and over"
-    },
-    "employment_male_farming_fishing_and_forestry_occupations": {
-        "api": "acs",
-        "variable": "C24010_031E",
-        "description": "Number of employed male 'Farming, fishing, and forestry occupations' for the civilian population age 16 and over"
-    },
-    "employment_male_construction_and_extraction_occupations": {
-        "api": "acs",
-        "variable": "C24010_032E",
-        "description": "Number of employed male 'Construction and extraction occupations' for the civilian population age 16 and over"
-    },
-    "employment_male_installation_maintenance_and_repair_occupations": {
-        "api": "acs",
-        "variable": "C24010_033E",
-        "description": "Number of employed male 'Installation, maintenance, and repair occupations' for the civilian population age 16 and over"
-    },
-    "employment_male_production_transportation_and_material_moving_occupations": {
-        "api": "acs",
-        "variable": "C24010_034E",
-        "description": "Number of employed male 'Production, transportation, and material moving occupations:' for the civilian population age 16 and over"
-    },
-    "employment_male_production_occupations": {
-        "api": "acs",
-        "variable": "C24010_035E",
-        "description": "Number of employed male 'Production occupations' for the civilian population age 16 and over"
-    },
-    "employment_male_transportation_occupations": {
-        "api": "acs",
-        "variable": "C24010_036E",
-        "description": "Number of employed male 'Transportation occupations' for the civilian population age 16 and over"
-    },
-    "employment_male_material_moving_occupations": {
-        "api": "acs",
-        "variable": "C24010_037E",
-        "description": "Number of employed male 'Material moving occupations' for the civilian population age 16 and over"
-    },
-    "employment_female_management_business_science_and_arts_occupations": {
-        "api": "acs",
-        "variable": "C24010_039E",
-        "description": "Number of employed female 'Management, business, science, and arts occupations:' for the civilian population age 16 and over"
-    },
-    "employment_female_management_business_and_financial_occupations": {
-        "api": "acs",
-        "variable": "C24010_040E",
-        "description": "Number of employed female 'Management, business, and financial occupations:' for the civilian population age 16 and over"
-    },
-    "employment_female_management_occupations": {
-        "api": "acs",
-        "variable": "C24010_041E",
-        "description": "Number of employed female 'Management occupations' for the civilian population age 16 and over"
-    },
-    "employment_female_business_and_financial_operations_occupations": {
-        "api": "acs",
-        "variable": "C24010_042E",
-        "description": "Number of employed female 'Business and financial operations occupations' for the civilian population age 16 and over"
-    },
-    "employment_female_computer_engineering_and_science_occupations": {
-        "api": "acs",
-        "variable": "C24010_043E",
-        "description": "Number of employed female 'Computer, engineering, and science occupations:' for the civilian population age 16 and over"
-    },
-    "employment_female_computer_and_mathematical_occupations": {
-        "api": "acs",
-        "variable": "C24010_044E",
-        "description": "Number of employed female 'Computer and mathematical occupations' for the civilian population age 16 and over"
-    },
-    "employment_female_architecture_and_engineering_occupations": {
-        "api": "acs",
-        "variable": "C24010_045E",
-        "description": "Number of employed female 'Architecture and engineering occupations' for the civilian population age 16 and over"
-    },
-    "employment_female_life_physical_and_social_science_occupations": {
-        "api": "acs",
-        "variable": "C24010_046E",
-        "description": "Number of employed female 'Life, physical, and social science occupations' for the civilian population age 16 and over"
-    },
-    "employment_female_education_legal_community_service_arts_and_media_occupations": {
-        "api": "acs",
-        "variable": "C24010_047E",
-        "description": "Number of employed female 'Education, legal, community service, arts, and media occupations:' for the civilian population age 16 and over"
-    },
-    "employment_female_community_and_social_service_occupations": {
-        "api": "acs",
-        "variable": "C24010_048E",
-        "description": "Number of employed female 'Community and social service occupations' for the civilian population age 16 and over"
-    },
-    "employment_female_legal_occupations": {
-        "api": "acs",
-        "variable": "C24010_049E",
-        "description": "Number of employed female 'Legal occupations' for the civilian population age 16 and over"
-    },
-    "employment_female_education_training_and_library_occupations": {
-        "api": "acs",
-        "variable": "C24010_050E",
-        "description": "Number of employed female 'Education, training, and library occupations' for the civilian population age 16 and over"
-    },
-    "employment_female_arts_design_entertainment_sports_and_media_occupations": {
-        "api": "acs",
-        "variable": "C24010_051E",
-        "description": "Number of employed female 'Arts, design, entertainment, sports, and media occupations' for the civilian population age 16 and over"
-    },
-    "employment_female_healthcare_practitioners_and_technical_occupations": {
-        "api": "acs",
-        "variable": "C24010_052E",
-        "description": "Number of employed female 'Healthcare practitioners and technical occupations:' for the civilian population age 16 and over"
-    },
-    "employment_female_health_diagnosing_and_treating_practitioners_and_other_technical_occupations": {
-        "api": "acs",
-        "variable": "C24010_053E",
-        "description": "Number of employed female 'Health diagnosing and treating practitioners and other technical occupations' for the civilian population age 16 and over"
-    },
-    "employment_female_health_technologists_and_technicians": {
-        "api": "acs",
-        "variable": "C24010_054E",
-        "description": "Number of employed female 'Health technologists and technicians' for the civilian population age 16 and over"
-    },
-    "employment_female_service_occupations": {
-        "api": "acs",
-        "variable": "C24010_055E",
-        "description": "Number of employed female 'Service occupations:' for the civilian population age 16 and over"
-    },
-    "employment_female_healthcare_support_occupations": {
-        "api": "acs",
-        "variable": "C24010_056E",
-        "description": "Number of employed female 'Healthcare support occupations' for the civilian population age 16 and over"
-    },
-    "employment_female_protective_service_occupations": {
-        "api": "acs",
-        "variable": "C24010_057E",
-        "description": "Number of employed female 'Protective service occupations:' for the civilian population age 16 and over"
-    },
-    "employment_female_fire_fighting_and_prevention_and_other_protective_service_workers_including_supervisors": {
-        "api": "acs",
-        "variable": "C24010_058E",
-        "description": "Number of employed female 'Fire fighting and prevention, and other protective service workers including supervisors' for the civilian population age 16 and over"
-    },
-    "employment_female_law_enforcement_workers_including_supervisors": {
-        "api": "acs",
-        "variable": "C24010_059E",
-        "description": "Number of employed female 'Law enforcement workers including supervisors' for the civilian population age 16 and over"
-    },
-    "employment_female_food_preparation_and_serving_related_occupations": {
-        "api": "acs",
-        "variable": "C24010_060E",
-        "description": "Number of employed female 'Food preparation and serving related occupations' for the civilian population age 16 and over"
-    },
-    "employment_female_building_and_grounds_cleaning_and_maintenance_occupations": {
-        "api": "acs",
-        "variable": "C24010_061E",
-        "description": "Number of employed female 'Building and grounds cleaning and maintenance occupations' for the civilian population age 16 and over"
-    },
-    "employment_female_personal_care_and_service_occupations": {
-        "api": "acs",
-        "variable": "C24010_062E",
-        "description": "Number of employed female 'Personal care and service occupations' for the civilian population age 16 and over"
-    },
-    "employment_female_sales_and_office_occupations": {
-        "api": "acs",
-        "variable": "C24010_063E",
-        "description": "Number of employed female 'Sales and office occupations:' for the civilian population age 16 and over"
-    },
-    "employment_female_sales_and_related_occupations": {
-        "api": "acs",
-        "variable": "C24010_064E",
-        "description": "Number of employed female 'Sales and related occupations' for the civilian population age 16 and over"
-    },
-    "employment_female_office_and_administrative_support_occupations": {
-        "api": "acs",
-        "variable": "C24010_065E",
-        "description": "Number of employed female 'Office and administrative support occupations' for the civilian population age 16 and over"
-    },
-    "employment_female_natural_resources_construction_and_maintenance_occupations": {
-        "api": "acs",
-        "variable": "C24010_066E",
-        "description": "Number of employed female 'Natural resources, construction, and maintenance occupations:' for the civilian population age 16 and over"
-    },
-    "employment_female_farming_fishing_and_forestry_occupations": {
-        "api": "acs",
-        "variable": "C24010_067E",
-        "description": "Number of employed female 'Farming, fishing, and forestry occupations' for the civilian population age 16 and over"
-    },
-    "employment_female_construction_and_extraction_occupations": {
-        "api": "acs",
-        "variable": "C24010_068E",
-        "description": "Number of employed female 'Construction and extraction occupations' for the civilian population age 16 and over"
-    },
-    "employment_female_installation_maintenance_and_repair_occupations": {
-        "api": "acs",
-        "variable": "C24010_069E",
-        "description": "Number of employed female 'Installation, maintenance, and repair occupations' for the civilian population age 16 and over"
-    },
-    "employment_female_production_transportation_and_material_moving_occupations": {
-        "api": "acs",
-        "variable": "C24010_070E",
-        "description": "Number of employed female 'Production, transportation, and material moving occupations:' for the civilian population age 16 and over"
-    },
-    "employment_female_production_occupations": {
-        "api": "acs",
-        "variable": "C24010_071E",
-        "description": "Number of employed female 'Production occupations' for the civilian population age 16 and over"
-    },
-    "employment_female_transportation_occupations": {
-        "api": "acs",
-        "variable": "C24010_072E",
-        "description": "Number of employed female 'Transportation occupations' for the civilian population age 16 and over"
-    },
-    "employment_female_material_moving_occupations": {
-        "api": "acs",
-        "variable": "C24010_073E",
-        "description": "Number of employed female 'Material moving occupations' for the civilian population age 16 and over"
-    },
-
-    //Poverty variables
-    "poverty": {
-        "api": "acs",
-        "variable": "B17001_002E",
-        "description": "Number of persons whose income in the past 12 months is below the poverty level"
-    },
-    "poverty_male": {
-        "api": "acs",
-        "variable": "B17001_003E",
-        "description": "Number of male persons whose income in the past 12 months is below the poverty level"
-    },
-    "poverty_female": {
-        "api": "acs",
-        "variable": "B17001_017E",
-        "description": "Number of female persons whose income in the past 12 months is below the poverty level"
-    },
-
-    //Demographic poverty
-    "poverty_white_alone": {
-        "api": "acs",
-        "variable": "B17001A_002E",
-        "description": "Number of persons whose income in the past 12 months is below the poverty level (White Alone)"
-    },
-    "poverty_black_alone": {
-        "api": "acs",
-        "variable": "B17001B_002E",
-        "description": "Number of persons whose income in the past 12 months is below the poverty level (Black or African American Alone)"
-    },
-    "population_american_indian_alone": {
-        "api": "acs",
-        "variable": "B17001C_002E",
-        "description": "Number of persons whose income in the past 12 months is below the poverty level  (American Indian or Alaskan Native Alone)"
-    },
-    "poverty_asian_alone": {
-        "api": "acs",
-        "variable": "B17001D_002E",
-        "description": "Number of persons whose income in the past 12 months is below the poverty level  (Asian Alone)"
-    },
-    "poverty_native_hawaiian_alone": {
-        "api": "acs",
-        "variable": "B17001E_002E",
-        "description": "Number of persons whose income in the past 12 months is below the poverty level  (Native Hawaiian and Other Pacific Islander Alone)"
-    },
-    "poverty_other_alone": {
-        "api": "acs",
-        "variable": "B17001F_002E",
-        "description": "Number of persons whose income in the past 12 months is below the poverty level  (Some Other Race Alone)"
-    },
-    "poverty_two_or_more_races": {
-        "api": "acs",
-        "variable": "B17001G_002E",
-        "description": "Number of persons whose income in the past 12 months is below the poverty level  (Two or more races)"
-    },
-    "poverty_hispanic_origin": {
-        "api": "acs",
-        "variable": "B17001I_002E",
-        "description": "Number of persons whose income in the past 12 months is below the poverty level  (Hispanic Origin)"
-    },
-
-    //Family poverty
-    "poverty_family": {
-        "api": "acs",
-        "variable": "B17012_002E",
-        "description": "Number of families below the poverty level in the past 12 months"
-    },
-    "poverty_family_married": {
-        "api": "acs",
-        "variable": "B17012_003E",
-        "description": "Number of married couples whose income is below the poverty level in the past 12 months"
-    },
-    "poverty_family_single_male": {
-        "api": "acs",
-        "variable": "B17012_009E",
-        "description": "Number of families with a male householder and no wife present whose income is below the poverty level in the past 12 months"
-    },
-    "poverty_family_single_female": {
-        "api": "acs",
-        "variable": "B17012_014E",
-        "description": "Number of families with a female householder and no husband present whose income is below the poverty level in the past 12 months"
-    },
-
-    //Age variables
-    "age": {
-        "api": "acs",
-        "variable": "B01002_001E",
-        "description": "Median age"
-    },
-    "median_male_age": {
-        "api": "acs",
-        "variable": "B01002_002E",
-        "description": "Median age by sex (male)"
-    },
-    "median_female_age": {
-        "api": "acs",
-        "variable": "B01002_003E",
-        "description": "Median age by sex (female)"
-    },
-
-    //Population Variables
-    "population": {
-        "api": "acs",
-        "variable": "B01003_001E",
-        "description": "Total population"
-    },
-    "population_white_alone": {
-        "api": "acs",
-        "variable": "B02001_002E",
-        "description": "Population (White Alone)"
-    },
-    "population_black_alone": {
-        "api": "acs",
-        "variable": "B02001_003E",
-        "description": "Population (Black or African American Alone)"
-    },
-    "population_american_indian_alone": {
-        "api": "acs",
-        "variable": "B02001_004E",
-        "description": "Population (American Indian or Alaskan Native Alone)"
-    },
-    "population_asian_alone": {
-        "api": "acs",
-        "variable": "B02001_005E",
-        "description": "Population (Asian Alone)"
-    },
-    "population_native_hawaiian_alone": {
-        "api": "acs",
-        "variable": "B02001_006E",
-        "description": "Population (Native Hawaiian and Other Pacific Islander Alone)"
-    },
-    "population_other_alone": {
-        "api": "acs",
-        "variable": "B02001_007E",
-        "description": "Population (Some Other Race Alone)"
-    },
-    "population_two_or_more_races": {
-        "api": "acs",
-        "variable": "B02001_008E",
-        "description": "Population (Two or more races)"
-    },
-    "population_hispanic_origin": {
-        "api": "acs",
-        "variable": "B03001_003E",
-        "description": "Population (Hispanic Origin)"
-    },
-
-    //Housing
-    "median_house_construction_year": {
-        "api": "acs",
-        "variable": "B25035_001E",
-        "description": "Median year housing units were built"
-    },
-    "median_contract_rent": {
-        "api": "acs",
-        "variable": "B25058_001E",
-        "description": "Median contract rent"
-    },
-    "median_gross_rent": {
-        "api": "acs",
-        "variable": "B25064_001E",
-        "description": "Median gross rent (contract rent plus the cost of utilities)"
-    },
-    "median_home_value": {
-        "api": "acs",
-        "variable": "B25077_001E",
-        "description": "Median value (dollars) for Owner-Occupied housing units"
-    },
-
-    //Commute times
-    "commute_time": {
-        "api": "acs",
-        "variable": "B08136_001E",
-        "description": "Total time spent commuting (in minutes)",
-        "normalizable": true
-    },
-    "commute_time_solo_automobile": {
-        "api": "acs",
-        "variable": "B08136_003E",
-        "description": "Time spent commuting (in minutes): Car, truck, or van - alone",
-        "normalizable": true
-    },
-    "commute_time_carpool": {
-        "api": "acs",
-        "variable": "B08136_004E",
-        "description": "Time spent commuting (in minutes): Car, truck, or van - carpool",
-        "normalizable": true
-    },
-    "commute_time_public_transport": {
-        "api": "acs",
-        "variable": "B08136_007E",
-        "description": "Time spent commuting (in minutes): public transport (excluding taxis)",
-        "normalizable": true
-    },
-    "commute_time_walked": {
-        "api": "acs",
-        "variable": "B08136_011E",
-        "description": "Time spent commuting (in minutes): walking",
-        "normalizable": true
-    },
-    "commute_time_other": {
-        "api": "acs",
-        "variable": "B08136_012E",
-        "description": "Time spent commuting (in minutes): Taxicab, motorcycle, bicycle, or other means",
-        "normalizable": true
-    },
-
-    //Education
-    "education_none": {
-        "api": "acs",
-        "variable": "B15003_002E",
-        "description": "The number of persons age 25 and over who completed no schooling"
-    },
-    "education_high_school": {
-        "api": "acs",
-        "variable": "B15003_017E",
-        "description": "The number of persons age 25 and over who have a regular high school diploma"
-    },
-    "education_ged": {
-        "api": "acs",
-        "variable": "B15003_018E",
-        "description": "The number of persons age 25 and over who have a GED or alternative credential"
-    },
-    "education_associates": {
-        "api": "acs",
-        "variable": "B15003_021E",
-        "description": "The number of persons age 25 and over who hold an Associate's degree"
-    },
-    "education_bachelors": {
-        "api": "acs",
-        "variable": "B15003_022E",
-        "description": "The number of persons age 25 and over who hold a Bachelor's degree"
-    },
-    "education_masters": {
-        "api": "acs",
-        "variable": "B15003_023E",
-        "description": "The number of persons age 25 and over who hold a Master's degree"
-    },
-    "education_professional": {
-        "api": "acs",
-        "variable": "B15003_024E",
-        "description": "The number of persons age 25 and over who hold a Professional degree"
-    },
-    "education_doctorate": {
-        "api": "acs",
-        "variable": "B15003_025E",
-        "description": "The number of persons age 25 and over who hold a Doctoral degree"
-    }
-};
 
 
 /**
@@ -922,7 +292,7 @@ CensusModule.prototype.getACSVariableDictionary = function(api, year) {
     URL = URL.replace(apiPattern, api);
     URL = URL.replace(yearPattern, year);
 
-    var response = CitySDK.prototype.sdkInstance.ajaxRequest(URL);
+    var response = this.sdkInstance.ajaxRequest(URL);
     if ( debug ) console.log( 'getACSVariableDictionary: ', response );
     return JSON.parse( response.content );
 };
@@ -946,7 +316,7 @@ CensusModule.prototype.latLngToFIPS = function(lat, lng) {
   geocoderURL = geocoderURL.replace(latPattern, lat);
   geocoderURL = geocoderURL.replace(lngPattern, lng);
 
-  var response = CitySDK.prototype.sdkInstance.jsonpRequest(geocoderURL).data.result.geographies;
+  var response = this.sdkInstance.jsonpRequest(geocoderURL).data.result.geographies;
   if ( debug ) console.log( 'latLngToFIPS: ', response );
   return response;
 };
@@ -977,7 +347,7 @@ CensusModule.prototype.addressToFIPS = function( street, city, state ) {
     geocoderURL = encodeURI(geocoderURL);
 
     //Make the call
-    var response = CitySDK.prototype.sdkInstance.jsonpRequest(geocoderURL);
+    var response = this.sdkInstance.jsonpRequest(geocoderURL);
     if ( debug ) console.log( 'addressToFIPS: ', response );
     return response.result.addressMatches;
 };
@@ -992,7 +362,7 @@ CensusModule.prototype.ZIPtoLatLng = function(zip) {
     var tigerURL = "http://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_Current/MapServer/2/query?where=ZCTA5%3D{zip}&text=&objectIds=&time=&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&relationParam=&outFields=CENTLAT%2CCENTLON&returnGeometry=false&maxAllowableOffset=&geometryPrecision=&outSR=&returnIdsOnly=false&returnCountOnly=false&orderByFields=&groupByFieldsForStatistics=&outStatistics=&returnZ=false&returnM=false&gdbVersion=&returnDistinctValues=false&f=pjson";
     tigerURL = tigerURL.replace(zipPattern, zip);
 
-    var response = CitySDK.prototype.sdkInstance.ajaxRequest(tigerURL);
+    var response = this.sdkInstance.ajaxRequest(tigerURL);
     response = JSON.parse( response.content );
     var returnValue = {
         "lat": null,
@@ -1016,115 +386,115 @@ CensusModule.prototype.ZIPtoLatLng = function(zip) {
  * @param {object} request JSON request (see APIRequest)
  */
 CensusModule.prototype.acsSummaryRequest = function( request ) {
-    var yearPattern = /({year})/;
-    var apiPattern = /({api})/;
-    var variablePattern = /({var})/;
-    var blockGroupPattern = /({blockGroup})/;
-    var statePattern = /({state})/;
-    var countyPattern = /({county})/;
-    var tractPattern = /({tract})/;
-    var placePattern = /({place})/;
-    var keyPattern = /({key})/;
-    var qualifiersPattern = /({qualifiers})/;
+    var yearPattern       = /({year})/,
+        apiPattern        = /({api})/,
+        variablePattern   = /({var})/,
+        blockGroupPattern = /({blockGroup})/,
+        statePattern      = /({state})/,
+        countyPattern     = /({county})/,
+        tractPattern      = /({tract})/,
+        placePattern      = /({place})/,
+        keyPattern        = /({key})/,
+        qualifiersPattern = /({qualifiers})/,
+        qualifiers        = "for=",
+        cascade           = false;
 
-    var qualifiers = "for=";
-    var cascade = false;
-
-    if(request.sublevel) {
-        var level = (request.level == "blockGroup") ? "block+group" : request.level;
-        switch(request.container) {
-            case "us":
-                qualifiers += level + ":*";
-                break;
-            case "place":
-            case "state":
-                qualifiers += level + ":*&in=state:{state}";
-                if(request.level == "blockGroup") qualifiers += "+county:{county}";
-                break;
-            case "county":
-                qualifiers += level + ":*&in=county:{county}+state:{state}";
-                break;
-            case "tract":
-                qualifiers += level + ":*&in=tract:{tract}+county:{county}+state:{state}";
-                break;
-        }
+    if ( request.sublevel ) {
+      var level = ( request.level == "blockGroup" ) ? "block+group" : request.level;
+      switch ( request.container ) {
+        case "us":
+          qualifiers += level + ":*";
+          break;
+        case "place":
+        case "state":
+          qualifiers += level + ":*&in=state:{state}";
+          if ( request.level == "blockGroup" )
+            qualifiers += "+county:{county}";
+          break;
+        case "county":
+          qualifiers += level + ":*&in=county:{county}+state:{state}";
+          break;
+        case "tract":
+          qualifiers += level + ":*&in=tract:{tract}+county:{county}+state:{state}";
+          break;
+      }
     }
 
-    //Only do this if the previous switch had no effect (i.e. no contianer)
+    //Only do this if the previous switch had no effect (i.e. no container)
     //TODO: Clean this up, unify with the above
-    if(qualifiers == "for=") {
-        switch(request.level) {
-            case "us":
-                //If sublevel, add the appropriate for and attach the in
-                if(request.sublevel) {
-                    qualifiers += "state:*";
-                    cascade = true;
-                } else {
-                    qualifiers += "us:1";
-                }
-                break;
-            case "blockGroup":
-                if(request.sublevel) {
-                    //Can't do this. No levels beneath. We'll set the sublevel to false here
-                    request.sublevel = false;
-                }
-                qualifiers += "block+Group:{blockGroup}";
-                if(!cascade) {
-                    qualifiers += "&in=";
-                    cascade = true;
-                }
-            case "tract":
-                //If sublevel, add the appropriate for and attach the in
-                //We also check the cascade tag so we don't do this twice.
-                if(request.sublevel & !cascade) {
-                    qualifiers += "block+Group:*&in=";
-                    cascade = true;
-                }
+    if ( qualifiers == "for=" ) {
+      switch ( request.level ) {
+        case "us":
+          //If sublevel, add the appropriate for and attach the in
+          if(request.sublevel) {
+              qualifiers += "state:*";
+              cascade = true;
+          } else {
+              qualifiers += "us:1";
+          }
+          break;
+        case "blockGroup":
+          if(request.sublevel) {
+              //Can't do this. No levels beneath. We'll set the sublevel to false here
+              request.sublevel = false;
+          }
+          qualifiers += "block+Group:{blockGroup}";
+          if(!cascade) {
+              qualifiers += "&in=";
+              cascade = true;
+          }
+        case "tract":
+          //If sublevel, add the appropriate for and attach the in
+          //We also check the cascade tag so we don't do this twice.
+          if(request.sublevel & !cascade) {
+              qualifiers += "block+Group:*&in=";
+              cascade = true;
+          }
 
-                qualifiers += "tract:{tract}";
-                if(!cascade) {
-                    qualifiers += "&in=";
-                    cascade = true;
-                } else {
-                    qualifiers += "+";
-                }
-            case "county":
-                //If sublevel, add the appropriate for and attach the in
-                //We also check the cascade tag so we don't do this twice.
-                if(request.sublevel & !cascade) {
-                    qualifiers += "tract:*&in=";
-                    cascade = true;
-                }
+          qualifiers += "tract:{tract}";
+          if(!cascade) {
+              qualifiers += "&in=";
+              cascade = true;
+          } else {
+              qualifiers += "+";
+          }
+        case "county":
+          //If sublevel, add the appropriate for and attach the in
+          //We also check the cascade tag so we don't do this twice.
+          if(request.sublevel & !cascade) {
+              qualifiers += "tract:*&in=";
+              cascade = true;
+          }
 
-                qualifiers += "county:{county}";
-                if(!cascade) {
-                    qualifiers += "&in=";
-                    cascade = true;
-                } else {
-                    qualifiers += "+";
-                }
-            case "place":
-                //If sublevel, add the appropriate for and attach the in
-                //Check for cascade so we don't do this twice
-                if(request.sublevel & !cascade) {
-                    qualifiers += "place:*&in=";
-                    cascade = true;
-                } else if(!cascade) {
-                    //We only use place in the for, for the moment
-                    qualifiers += "place:{place}&in=";
-                    cascade = true;
-                }
-            case "state":
-                //If sublevel, add the appropriate for and attach the in
-                //We also check the cascade tag so we don't do this twice.
-                if(request.sublevel & !cascade) {
-                    qualifiers += "county:*&in=";
-                    cascade = true;
-                }
+          qualifiers += "county:{county}";
+          if(!cascade) {
+              qualifiers += "&in=";
+              cascade = true;
+          } else {
+              qualifiers += "+";
+          }
+        case "place":
+          //If sublevel, add the appropriate for and attach the in
+          //Check for cascade so we don't do this twice
+          if(request.sublevel & !cascade) {
+              qualifiers += "place:*&in=";
+              cascade = true;
+          } else if(!cascade) {
+              //We only use place in the for, for the moment
+              qualifiers += "place:{place}&in=";
+              cascade = true;
+          }
+        case "state":
+          //If sublevel, add the appropriate for and attach the in
+          //We also check the cascade tag so we don't do this twice.
+          if(request.sublevel & !cascade) {
+              qualifiers += "county:*&in=";
+              cascade = true;
+          }
 
-                qualifiers += "state:{state}";
-                break;
-        }
+          qualifiers += "state:{state}";
+          break;
+      }
     }
 
     //Construct the list of variables
@@ -1162,7 +532,7 @@ CensusModule.prototype.acsSummaryRequest = function( request ) {
     acsURL = acsURL.replace(placePattern, request.place);
     acsURL = acsURL.replace(keyPattern, this.apiKey);
 
-    var response = CitySDK.prototype.sdkInstance.ajaxRequest(acsURL).data;
+    var response = this.sdkInstance.ajaxRequest(acsURL).data;
     if ( debug ) console.log( 'acsSummaryRequest: ', response );
     return response;
 };
@@ -1235,14 +605,14 @@ CensusModule.prototype.tigerwebRequest = function(request) {
     this.parseRequestStateCode(request);
 
     //Check for zip code
-    if("zip" in request) {
+    if ( "zip" in request ) {
       //We have zip code - but do we have lat/lng?
-      if(!("lat" in request) || !("lng" in request)) {
+      if(! ( "lat" in request ) || !( "lng" in request )) {
         //We have the zip but no lat/lng - parse it and re-call
-        var response = this.ZIPtoLatLng(request.zip);
-        request.lat = response.lat;
-        request.lng = response.lng;
-        CitySDK.prototype.sdkInstance.modules.census.tigerwebRequest(request);
+        var response  = this.ZIPtoLatLng(request.zip);
+        request.lat   = response.lat;
+        request.lng   = response.lng;
+        this.instance.tigerwebRequest(request);
       }
     }
 
@@ -1258,7 +628,7 @@ CensusModule.prototype.tigerwebRequest = function(request) {
         //Attach this "matched address" to the request address object so the user knows what we're using
         request.address.addressMatch = response[0];
 
-        CitySDK.prototype.sdkInstance.modules.census.tigerwebRequest(request);
+        this.instance.tigerwebRequest(request);
       }
     }
 
@@ -1281,7 +651,7 @@ CensusModule.prototype.tigerwebRequest = function(request) {
         //They submitted a sublevel flag but it's false... remove the unnecessary flags and re-request
         delete request.sublevel;
         delete request.container;
-        return CitySDK.prototype.sdkInstance.modules.census.tigerwebRequest(request);
+        return this.instance.tigerwebRequest(request);
       }
 
       if(!("containerGeometry" in request)) {
@@ -1291,16 +661,16 @@ CensusModule.prototype.tigerwebRequest = function(request) {
         tigerRequest.geometryType = "esriGeometryPoint";
         tigerRequest.spatialRel = "esriSpatialRelIntersects";
 
-        var response = CitySDK.prototype.sdkInstance.postRequest(tigerURL, tigerRequest).data;
+        var response = this.sdkInstance.postRequest(tigerURL, tigerRequest).data;
         var features = response.features;
         //Grab our container ESRI geography, attach it to our request, and call this function again.
         if (request.container == "us") {
-          request.containerGeometry = CitySDK.prototype.sdkInstance.modules.census.GEOtoESRI(usBoundingBox)[0].geometry;
+          request.containerGeometry = this.instance.GEOtoESRI(usBoundingBox)[0].geometry;
         } else {
           request.containerGeometry = features[0].geometry;
         }
 
-        return CitySDK.prototype.sdkInstance.modules.census.tigerwebRequest(request);
+        return this.instance.tigerwebRequest(request);
       } else {
         //We have a sublevel request with a container, AND we've already grabbed the container's ESRI json
         tigerURL = tigerURL.replace(mapserverPattern, mapServers[request.level]);
@@ -1310,15 +680,15 @@ CensusModule.prototype.tigerwebRequest = function(request) {
 
         delete request.containerGeometry;
 
-        var response = CitySDK.prototype.sdkInstance.postRequest(tigerURL, tigerRequest).data;
-        return CitySDK.prototype.sdkInstance.modules.census.ESRItoGEO(response);
+        var response = this.sdkInstance.postRequest(tigerURL, tigerRequest).data;
+        return this.instance.ESRItoGEO(response);
       }
     } else if ("sublevel" in request) {
       if (!request.sublevel) {
         //They submitted a sublevel flag but it's false... remove the unnecessary flags and re-request
         delete request.sublevel;
         delete request.container;
-        return CitySDK.prototype.sdkInstance.modules.census.tigerwebRequest(request);
+        return this.instance.tigerwebRequest(request);
       }
       //Sublevel, no container
       //Make the container equal to the level, and the sublevel
@@ -1341,7 +711,7 @@ CensusModule.prototype.tigerwebRequest = function(request) {
             break;
       };
 
-      res = CitySDK.prototype.sdkInstance.modules.census.tigerwebRequest(request);
+      res = this.instance.tigerwebRequest(request);
     } else {
       //We have a sublevel request with a container. We need to grab the container's geography and return it
       tigerURL = tigerURL.replace(mapserverPattern, mapServers[request.level]);
@@ -1349,8 +719,8 @@ CensusModule.prototype.tigerwebRequest = function(request) {
       tigerRequest.geometryType = "esriGeometryPoint";
       tigerRequest.spatialRel = "esriSpatialRelIntersects";
 
-      var resp = CitySDK.prototype.sdkInstance.postRequest(tigerURL, tigerRequest).data;
-      res = CitySDK.prototype.sdkInstance.modules.census.ESRItoGEO(resp);
+      var resp = this.sdkInstance.postRequest(tigerURL, tigerRequest).data;
+      res = this.instance.ESRItoGEO(resp);
     }
 
     if ( debug ) console.log( 'latLngToFIPS: ', res );
@@ -1422,10 +792,10 @@ CensusModule.prototype.tigerwebRequest = function(request) {
  * @param {object} request The JSON object of the request
  */
 CensusModule.prototype.APIRequest = function(request) {
-  if ( !( "year" in request ))
+  if (! ( "year" in request ))
     request.year = this.DEFAULT_YEAR;
 
-  if( !("api" in request ))
+  if (! ("api" in request ))
     request.api = this.DEFAULT_API;
   else if ( this.acsyears[request.year].indexOf( request.api ) < 0 )
     console.log( "Warning: API " + request.api + " does not appear to support " + request.year );
@@ -1454,7 +824,7 @@ CensusModule.prototype.APIRequest = function(request) {
       var response = this.ZIPtoLatLng( request.zip );
       request.lat = response.lat;
       request.lng = response.lng;
-      CitySDK.prototype.sdkInstance.modules.census.APIRequest(request);
+      this.instance.APIRequest(request);
     }
   }
 
@@ -1471,7 +841,7 @@ CensusModule.prototype.APIRequest = function(request) {
       //Attach this "matched address" to the request address object so the user knows what we're using
       request.address.addressMatch = response[0];
 
-      CitySDK.prototype.sdkInstance.modules.census.APIRequest(request);
+      this.instance.APIRequest(request);
     }
   }
 
@@ -1490,7 +860,7 @@ CensusModule.prototype.APIRequest = function(request) {
     request["place_name"] = ("Incorporated Places" in geographies) ? (geographies["Incorporated Places"].length > 0) ? geographies["Incorporated Places"][0]["NAME"] : null : null;
     request.geocoded      = true;
 
-    CitySDK.prototype.sdkInstance.modules.census.APIRequest(request);
+    this.instance.APIRequest(request);
   }
 
   if ( "state" in request && "county" in request && "tract" in request && "blockGroup" in request ) {
@@ -1535,11 +905,11 @@ CensusModule.prototype.APIRequest = function(request) {
 
           for ( var j = 0; j < request.variables.length; j++ ) {
             currentVariable = request.variables[j];
-            var parsedVariable = CitySDK.prototype.sdkInstance.modules.census.parseToVariable(currentVariable);
+            var parsedVariable = this.instance.parseToVariable(currentVariable);
             currentDataObject[currentVariable] = currentResponseItem[ response[0].indexOf( parsedVariable ) ];
 
-            if(CitySDK.prototype.sdkInstance.modules.census.isNormalizable(currentVariable)) {
-              var parsedPop = CitySDK.prototype.sdkInstance.modules.census.parseToVariable("population");
+            if(this.instance.isNormalizable(currentVariable)) {
+              var parsedPop = this.instance.parseToVariable("population");
               currentDataObject[currentVariable + "_normalized"] = currentDataObject[currentVariable]/ currentResponseItem[ response[0].indexOf( parsedPop ) ];
             }
           }
@@ -1552,11 +922,11 @@ CensusModule.prototype.APIRequest = function(request) {
         var currentDataObject = {};
         for ( var i = 0; i < request.variables.length; i++ ) {
           currentVariable = request.variables[i];
-          var parsedVariable = CitySDK.prototype.sdkInstance.modules.census.parseToVariable(currentVariable);
+          var parsedVariable = this.instance.parseToVariable(currentVariable);
           currentDataObject[currentVariable] = response[1][ response[0].indexOf( parsedVariable ) ];
 
-          if ( CitySDK.prototype.sdkInstance.modules.census.isNormalizable( currentVariable ) ) {
-            var parsedPop = CitySDK.prototype.sdkInstance.modules.census.parseToVariable( "population" );
+          if ( this.instance.isNormalizable( currentVariable ) ) {
+            var parsedPop = this.instance.parseToVariable( "population" );
             currentDataObject[currentVariable + "_normalized"] = currentDataObject[currentVariable]/ response[1][ response[0].indexOf( parsedPop ) ];
           }
 
@@ -1573,7 +943,7 @@ CensusModule.prototype.APIRequest = function(request) {
       if (request.level == "us" ) {
         //Ok, let's just resubmit it with D.C. as the "state"
         request.state = "DC";
-        CitySDK.prototype.sdkInstance.modules.census.APIRequest(request);
+        this.instance.APIRequest(request);
       }
 
       //We have some container geometry but no specific location, let the supplemental requests handle the variables
@@ -1615,7 +985,7 @@ CensusModule.prototype.GEORequest = function(request) {
     //First - check if we have a data object in the request OR if we aren't requesting variables
     if("data" in request || !("variables" in request)) {
       //We have a data object for the request (or there isn't any requested), now we can get the geoJSON for the area
-      var response = CitySDK.prototype.sdkInstance.modules.census.tigerwebRequest( request );
+      var response = this.instance.tigerwebRequest( request );
       if(!("totals" in response)) {
         response.totals = {};
       }
@@ -1656,7 +1026,7 @@ CensusModule.prototype.GEORequest = function(request) {
               };
 
               CensusModule.prototype.SUPPLEMENTAL_REQUESTS_IN_FLIGHT++;
-              var resp = CitySDK.prototype.sdkInstance.modules.census.APIRequest(suppRequest);
+              var resp = this.instance.APIRequest(suppRequest);
               CensusModule.prototype.SUPPLEMENTAL_REQUESTS_IN_FLIGHT--;
               for (var property in resp.data[0]) {
                 if ( resp.data[0].hasOwnProperty( property ) ) {
@@ -1689,8 +1059,8 @@ CensusModule.prototype.GEORequest = function(request) {
       return response;
     } else {
       //We do not have the requested variables - let's get them
-      var response = CitySDK.prototype.sdkInstance.modules.census.APIRequest( request );
-      return CitySDK.prototype.sdkInstance.modules.census.GEORequest( response );
+      var response = this.instance.APIRequest( request );
+      return this.instance.GEORequest( response );
     }
 };
 

@@ -13,17 +13,21 @@ Package.describe({
 
 Package.onUse(function(api) {
   api.versionsFrom('1.2.1');
-  api.use([ 'ecmascript', 'http', 'underscore' ]);
+  api.use([ 'ecmascript', 'http', 'underscore', 'check' ]);
 
   api.addFiles([
     'js/citysdk.js',
     'js/citysdk.census.js',
+    'js/citysdk.census.aliases.js',
     'js/citysdk.ckan.js',
     'js/citysdk.eia.js',
     'js/citysdk.farmersMarket.js',
     'js/citysdk.fema.js',
     'js/citysdk.moduleTemplate.js',
     'js/citysdk.socrata.js',
+    // 'js/messages.js',
+    // 'js/specs.js'
+    'js/methods.js',
   ], 'server' );
 
   api.export( 'CitySDK' );
